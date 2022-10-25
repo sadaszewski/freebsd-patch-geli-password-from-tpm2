@@ -179,7 +179,7 @@ def patch_generic_conf_amd64(args):
         raise RuntimeError('Could not find first options statements in sys/amd64/conf/GENERIC')
 
     lines = lines[:i] + [
-        'options        LOADER_TPM2_PASSPHRASE         # TPM2 Passphrase Support (rootfs check)'
+        'options        TPM2_PASSPHRASE         # TPM2 Passphrase Support (rootfs check)'
     ] + lines[i:]
 
     with open(fname, 'w') as f:

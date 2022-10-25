@@ -29,13 +29,11 @@ def patch_stand_makefile(args):
 
     lines = lines[:i+1] + [
         '',
-        '',
         '.if ${MK_LOADER_TPM2_PASSPHRASE} == "yes"',
         'SRCS += tpm2.c',
         'SRCS += tpm2nv.c',
         'CFLAGS += -DLOADER_TPM2_PASSPHRASE',
         '.endif',
-        ''
     ] + lines[i+1:]
 
     with open(fname, 'w') as f:
@@ -56,12 +54,10 @@ def patch_stand_main(args):
 
     lines = lines[:i+1] + [
         '',
-        '',
         '#ifdef LOADER_TPM2_PASSPHRASE',
         '#include "efitpm2.h"',
         '#include "efitpm2nv.h"',
         '#endif',
-        ''
     ] + lines[i+1:]
 
     for i in range(i+1, len(lines)):
@@ -72,13 +68,11 @@ def patch_stand_main(args):
 
     lines = lines[:i+1] + [
         '',
-        '',
         '#ifdef LOADER_TPM2_PASSPHRASE',
         '\ttpm2_check_efivars();',
         '\ttpm2_retrieve_passphrase();',
         '\ttpm2_pcr_extend();',
         '#endif',
-        ''
     ] + lines[i+1:]
 
     for i in range(i+1, len(lines)):
@@ -95,11 +89,9 @@ def patch_stand_main(args):
 
     lines = lines[:i+1] + [
         '',
-        '',
         '#ifdef LOADER_TPM2_PASSPHRASE',
         '\ttpm2_check_passphrase_marker();',
         '#endif',
-        ''
     ] + lines[i+1:]
 
     with open(fname, 'w') as f:
@@ -120,11 +112,9 @@ def patch_stand_interp(args):
 
     lines = lines[:i+1] + [
         '',
-        '',
         '#if defined(EFI) && defined(LOADER_TPM2_PASSPHRASE)',
         'void destroy_crypto_info(void); // ../efi/loader/tpm2.c',
         '#endif',
-        ''
     ] + lines[i+1:]
 
     for i in range(i+1, len(lines)):
@@ -135,7 +125,6 @@ def patch_stand_interp(args):
 
     lines = lines[:i+1] + [
         '',
-        '',
         '#if defined(EFI) && defined(LOADER_TPM2_PASSPHRASE)',
         '\tif (getenv("kern.geom.eli.passphrase.from_tpm2.was_retrieved")[0] == \'1\') {',
         '\t\t// we cannot allow any interaction',
@@ -143,7 +132,6 @@ def patch_stand_interp(args):
 		'\t\texit(-1);',
         '\t}',
         '#endif',
-        ''
     ] + lines[i+1:]
 
     with open(fname, 'w') as f:
@@ -211,7 +199,7 @@ def patch_sys_conf_files(args):
         raise RuntimeError('Could not find kern/init_main.c in sys/conf/files')
 
     lines = lines[:i+1] + [
-        'kern/tpm2cpm.c                 optional tpm2_passphrase'
+        'kern/tpm2cpm.c                  optional tpm2_passphrase'
     ] + lines[i+1:]
 
     with open(fname, 'w') as f:

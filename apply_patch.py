@@ -137,7 +137,7 @@ def patch_stand_interp(args):
         '',
         '',
         '#if defined(EFI) && defined(LOADER_TPM2_PASSPHRASE)',
-        '\tif (getenv("kern.geom.eli.passphrase.from_tpm2.was_retrieved")[0] == '1') {',
+        '\tif (getenv("kern.geom.eli.passphrase.from_tpm2.was_retrieved")[0] == \'1\') {',
         '\t\t// we cannot allow any interaction',
         '\t\tdestroy_crypto_info();',
 		'\t\texit(-1);',
@@ -228,7 +228,7 @@ def patch_sys_conf_options(args):
         if lines[i].strip().startswith('TPM_HARVEST'):
             break
     else:
-        raise RuntimeError('Could not TPM_HARVEST in sys/conf/options')
+        raise RuntimeError('Could not find TPM_HARVEST in sys/conf/options')
 
     lines = lines[:i+1] + [
         '',

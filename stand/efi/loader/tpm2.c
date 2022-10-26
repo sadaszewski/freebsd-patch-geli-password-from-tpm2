@@ -26,6 +26,23 @@
 #define TPM2_AUTOBOOT_TIMEOUT 0
 
 
+#ifndef LOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT
+#define LOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT "sha256:0,2,4,7,8"
+#endif
+
+#ifndef LOADER_TPM2_PASSPHRASE_NVINDEX_DEFAULT
+#define LOADER_TPM2_PASSPHRASE_NVINDEX_DEFAULT "0x1000001"
+#endif
+
+#ifndef LOADER_TPM2_PASSPHRASE_SALT_DEFAULT
+#define LOADER_TPM2_PASSPHRASE_SALT_DEFAULT "gjSbJ12RGgJ/oCEcqXpz1FqlLK3NqSm2gZbDAPxe4qG3E7bxkTqP4wlcLmEhg4IJQtt8v9KkGlGzLXMSvF5sVw=="
+#endif
+
+#ifndef LOADER_TPM2_PASSPHRASE_PCRHANDLE_DEFAULT
+#define LOADER_TPM2_PASSPHRASE_PCRHANDLE_DEFAULT 8
+#endif
+
+
 static TPMS_PCR_SELECTION pcr_selection;
 static TPMI_RH_NV_INDEX nvindex;
 static UINT8 try_retrieve_passphrase_from_tpm;
@@ -36,7 +53,7 @@ static UINT8 passphrase_was_retrieved;
 TPMI_ALG_HASH tpm2_parse_efivar_policy_spec(BYTE *pcrSelect, BYTE *sizeofSelect);
 
 
-static char *efi_freebsd_getenv_helper(const char *name) {
+static char *efi_freebsd_getenv_helper(const char *name, const char *default_value) {
 	char *freeme = NULL;
 	UINTN len = 0;
 
@@ -51,7 +68,11 @@ static char *efi_freebsd_getenv_helper(const char *name) {
 			(void)free(freeme);
 			return NULL;
 		}
-	}
+	} else if (default_value != NULL) {
+        freeme = malloc(strlen(default_value));
+        strcpy(freeme, default_value);
+        return freeme;
+    }
 
 	return NULL;
 }
@@ -82,7 +103,8 @@ TPMI_ALG_HASH tpm2_parse_efivar_policy_spec(BYTE *pcrSelect, BYTE *sizeofSelect)
 	bzero(pcrSelect, PCR_SELECT_MAX);
 	*sizeofSelect = PCR_SELECT_MIN;
 
-	policy_pcr = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2PolicyPcr");
+	policy_pcr = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2PolicyPcr",
+        LOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT);
 	if (policy_pcr == NULL)
 		return TPM_ALG_ERROR;
 
@@ -136,7 +158,8 @@ static void pause(time_t secs) {
 
 
 static EFI_STATUS tpm2_parse_efivar_nvindex_spec(TPMI_RH_NV_INDEX *out) {
-	char *freeme = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2NvIndex");
+	char *freeme = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2NvIndex",
+        LOADER_TPM2_PASSPHRASE_NVINDEX_DEFAULT);
 	if (freeme == NULL)
 		return EFI_NOT_FOUND;
 	setenv("kern.geom.eli.passphrase.from_tpm2.nvindex", freeme, 1);
@@ -359,7 +382,8 @@ void tpm2_check_passphrase_marker() {
 	close(fd);
 
 	SHA256_Init(&ctx);
-	salt = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2Salt");
+	salt = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2Salt",
+        LOADER_TPM2_PASSPHRASE_SALT_DEFAULT);
 	if (salt != NULL) {
 		SHA256_Update(&ctx, salt, strlen(salt));
 		setenv("kern.geom.eli.passphrase.from_tpm2.salt", salt, 1);
@@ -386,7 +410,7 @@ exit_timeout:
 
 
 static int tpm2_parse_efivar_pcrextend_spec(TPMI_ALG_HASH *hashAlg, BYTE *digest) {
-    char *pcrExtend_freeme = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2PcrExtend");
+    char *pcrExtend_freeme = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2PcrExtend", NULL);
     if (pcrExtend_freeme == NULL) {
         return -1;
     }
@@ -439,7 +463,7 @@ static int tpm2_parse_efivar_pcrextend_spec(TPMI_ALG_HASH *hashAlg, BYTE *digest
 
 
 void tpm2_pcr_extend() {
-    TPMI_DH_PCR         PcrHandle = 8;
+    TPMI_DH_PCR         PcrHandle = LOADER_TPM2_PASSPHRASE_PCRHANDLE_DEFAULT;
     TPML_DIGEST_VALUES  Digests = {
         .count = 1,
         .digests = {

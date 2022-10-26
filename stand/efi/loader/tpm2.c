@@ -343,7 +343,7 @@ void tpm2_check_passphrase_marker() {
 	SHA256_CTX ctx;
 	unsigned char digest[SHA256_DIGEST_LENGTH];
 	char digest_human_readable[SHA256_DIGEST_LENGTH * 2 + 1];
-	char *salt;
+	char *salt_freeme;
 
 	if (!passphrase_was_retrieved) {
 		printf("Passphrase from TPM was not used - OK.\n");
@@ -382,11 +382,12 @@ void tpm2_check_passphrase_marker() {
 	close(fd);
 
 	SHA256_Init(&ctx);
-	salt = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2Salt",
+	salt_freeme = efi_freebsd_getenv_helper("KernGeomEliPassphraseFromTpm2Salt",
         LOADER_TPM2_PASSPHRASE_SALT_DEFAULT);
-	if (salt != NULL) {
-		SHA256_Update(&ctx, salt, strlen(salt));
-		setenv("kern.geom.eli.passphrase.from_tpm2.salt", salt, 1);
+	if (salt_freeme != NULL) {
+		SHA256_Update(&ctx, salt_freeme, strlen(salt_freeme));
+		setenv("kern.geom.eli.passphrase.from_tpm2.salt", salt_freeme, 1);
+        (void)free(salt_freeme);
 	}
 	SHA256_Update(&ctx, passphrase_from_nvindex.buffer, passphrase_from_nvindex.size);
 	SHA256_Final(digest, &ctx);

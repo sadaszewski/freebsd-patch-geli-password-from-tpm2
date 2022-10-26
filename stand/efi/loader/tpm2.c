@@ -38,8 +38,8 @@
 #define LOADER_TPM2_PASSPHRASE_SALT_DEFAULT "gjSbJ12RGgJ/oCEcqXpz1FqlLK3NqSm2gZbDAPxe4qG3E7bxkTqP4wlcLmEhg4IJQtt8v9KkGlGzLXMSvF5sVw=="
 #endif
 
-#ifndef LOADER_TPM2_PASSPHRASE_PCRHANDLE_DEFAULT
-#define LOADER_TPM2_PASSPHRASE_PCRHANDLE_DEFAULT 8
+#ifndef LOADER_TPM2_PASSPHRASE_PCRHANDLE
+#define LOADER_TPM2_PASSPHRASE_PCRHANDLE 8
 #endif
 
 
@@ -464,7 +464,7 @@ static int tpm2_parse_efivar_pcrextend_spec(TPMI_ALG_HASH *hashAlg, BYTE *digest
 
 
 void tpm2_pcr_extend() {
-    TPMI_DH_PCR         PcrHandle = LOADER_TPM2_PASSPHRASE_PCRHANDLE_DEFAULT;
+    TPMI_DH_PCR         PcrHandle = LOADER_TPM2_PASSPHRASE_PCRHANDLE;
     TPML_DIGEST_VALUES  Digests = {
         .count = 1,
         .digests = {

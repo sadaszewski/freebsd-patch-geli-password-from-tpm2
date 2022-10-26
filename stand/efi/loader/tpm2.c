@@ -69,7 +69,7 @@ static char *efi_freebsd_getenv_helper(const char *name, const char *default_val
 			return NULL;
 		}
 	} else if (default_value != NULL) {
-        freeme = malloc(strlen(default_value));
+        freeme = malloc(strlen(default_value) + 1);
         strcpy(freeme, default_value);
         return freeme;
     }

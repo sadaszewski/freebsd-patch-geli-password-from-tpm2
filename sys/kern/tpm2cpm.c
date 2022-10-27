@@ -13,6 +13,7 @@
 #include <sys/kernel.h>
 #include <sys/syscallsubr.h>
 #include <sys/proc.h>
+#include <sys/kenv.h>
 
 #include <sys/stat.h>
 #include <sys/fcntl.h>
@@ -26,15 +27,13 @@
 #include <geom/eli/g_eli.h>
 
 
-static void zero_and_unset_env(const char *name) {
-	char *value = kern_getenv(name);
-	if (value == NULL)
-		return;
-	while (*value) {
-		*value++ = '\0';
-	}
-	kern_unsetenv(name);
-}
+extern bool dynamic_kenv;
+
+static char g_passphrase_buf[KENV_MVALLEN + 1];
+static char *g_passphrase;
+static char g_salt_buf[KENV_MVALLEN + 1];
+static char *g_salt;
+static bool g_was_retrieved;
 
 
 static void g_eli_zero_key(struct g_eli_softc *sc, struct g_eli_key *key) {
@@ -91,9 +90,13 @@ static void wipe_geli_keys() {
 }
 
 
+static void wipe_secrets() {
+    explicit_bzero(&g_passphrase_buf[0], KENV_MVALLEN + 1);
+}
+
+
 static void destroy_crypto_info() {
-	zero_and_unset_env("kern.geom.eli.passphrase");
-	zero_and_unset_env("kern.geom.eli.passphrase.from_tpm2.passphrase");
+    wipe_secrets();
 	wipe_geli_keys();
 }
 
@@ -131,17 +134,13 @@ static void tpm2_check_passphrase_marker(void *param) {
 	unsigned char digest[SHA256_DIGEST_LENGTH];
 	char digest_human_readable[SHA256_DIGEST_LENGTH * 2 + 1];
 	SHA256_CTX ctx;
-	char *salt;
 
-	char *was_retrieved = kern_getenv("kern.geom.eli.passphrase.from_tpm2.was_retrieved");
-	char *passphrase = kern_getenv("kern.geom.eli.passphrase.from_tpm2.passphrase");
-
-	if (was_retrieved == NULL || was_retrieved[0] != '1') {
+	if (!g_was_retrieved) {
 		printf("Passphrase from TPM was not used - OK.\n");
 		return;
 	}
 
-	if (passphrase == NULL) {
+	if (g_passphrase == NULL) {
 		mypanic("Passphrase was retrieved from the TPM but was not passed to us.\n");
 	}
 
@@ -177,11 +176,10 @@ static void tpm2_check_passphrase_marker(void *param) {
 	buf[sb.st_size] = '\0';
 
 	SHA256_Init(&ctx);
-	salt = kern_getenv("kern.geom.eli.passphrase.from_tpm2.salt");
-	if (salt != NULL) {
-		SHA256_Update(&ctx, salt, strlen(salt));
+	if (g_salt != NULL) {
+		SHA256_Update(&ctx, g_salt, strlen(g_salt));
 	}
-	SHA256_Update(&ctx, passphrase, strlen(passphrase));
+	SHA256_Update(&ctx, g_passphrase, strlen(g_passphrase));
 	SHA256_Final(digest, &ctx);
 	sha256_digest_make_human_readable(digest, digest_human_readable);
 
@@ -190,14 +188,60 @@ static void tpm2_check_passphrase_marker(void *param) {
 	}
 
 	printf("Passphrase marker found and matching - we are done.\n");
-	zero_and_unset_env("kern.geom.eli.passphrase.from_tpm2.passphrase");
-	zero_and_unset_env("kern.geom.eli.passphrase");
+    wipe_secrets();
 
 	error = kern_close(td, fd);
 	if (error) {
 		printf("Failed to close passphrase marker - that's weird.\n");
 	}
 }
+
+
+static void static_kenv_wipe(const char *name) {
+    if (dynamic_kenv) {
+        panic("%s: called with dynamic kenv", __func__);
+    }
+	char *value = kern_getenv(name);
+	if (value == NULL)
+		return;
+	while (*value) {
+		*value++ = '\x01';
+	}
+}
+
+
+// This needs to happen before the dynamic kenv is initialized
+static void tpm2cpm_sanitize_kenv(void *param) {
+    const char *was_retrieved = kern_getenv("kern.geom.eli.passphrase.from_tpm2.was_retrieved");
+    const char *passphrase = kern_getenv("kern.geom.eli.passphrase.from_tpm2.passphrase");
+    const char *salt = kern_getenv("kern.geom.eli.passphrase.from_tpm2.salt");
+
+    if (was_retrieved == NULL || was_retrieved[0] != '1') {
+        g_was_retrieved = false;
+    } else {
+        g_was_retrieved = true;
+    }
+
+    if (passphrase) {
+        strncpy(&g_passphrase_buf[0], passphrase, KENV_MVALLEN);
+        g_passphrase = &g_passphrase_buf[0];
+    } else {
+        g_passphrase = NULL;
+    }
+
+    if (salt) {
+        strncpy(&g_salt_buf[0], salt, KENV_MVALLEN);
+        g_salt = &g_salt_buf[0];
+    } else {
+        g_salt = NULL;
+    }
+
+    static_kenv_wipe("kern.geom.eli.passphrase.from_tpm2.passphrase");
+	static_kenv_wipe("kern.geom.eli.passphrase");
+}
+
+
+SYSINIT(tpm2cpm_sanitize_kenv, SI_SUB_KMEM, SI_ORDER_ANY, tpm2cpm_sanitize_kenv, NULL);
 
 
 static void tpm2cpm_init(void *param) {

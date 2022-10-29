@@ -52,5 +52,5 @@ Mkfile.old
 dkms.conf
 
 # Project specific
-/test/
+/test-env/
 

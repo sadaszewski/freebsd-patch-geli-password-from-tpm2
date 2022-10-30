@@ -3,6 +3,7 @@ import os
 import subprocess
 import tempfile
 from contextlib import ExitStack
+import shutil
 
 
 def create_parser():
@@ -12,7 +13,8 @@ def create_parser():
     parser.add_argument('--vm-geli-passphrase', type=str, default='admin')
     parser.add_argument('--vm-bootenv', type=str, default='default')
     parser.add_argument('--md-unit', type=int, default=15)
-    parser.add_argument('--partition-number', type=int, default=2)
+    parser.add_argument('--zfs-partition-number', type=int, default=2)
+    parser.add_argument('--efi-partition-number', type=int, default=1)
     parser.add_argument('--vm-pool-name', type=str, default='zroot')
     parser.add_argument('--alt-pool-name', type=str, default='altzroot')
     parser.add_argument('--alt-root', type=str, default='/tmp/altroot')
@@ -40,9 +42,9 @@ def main():
             f.write(args.vm_geli_passphrase)
         subprocess.check_output([ 'geli', 'attach',
             '-j', os.path.join(d, 'passfile'),
-            f'/dev/md{args.md_unit}p{args.partition_number}' ])
+            f'/dev/md{args.md_unit}p{args.zfs_partition_number}' ])
         es.callback(lambda: print('geli detach') or \
-            subprocess.check_output([ 'geli', 'detach', f'/dev/md{args.md_unit}p{args.partition_number}.eli' ]))
+            subprocess.check_output([ 'geli', 'detach', f'/dev/md{args.md_unit}p{args.zfs_partition_number}.eli' ]))
 
         print('zpool import')
         os.makedirs(args.alt_root, exist_ok=True)
@@ -50,7 +52,7 @@ def main():
             '-f',
             '-N',
             '-R', args.alt_root,
-            '-d', f'/dev/md{args.md_unit}p{args.partition_number}.eli',
+            '-d', f'/dev/md{args.md_unit}p{args.zfs_partition_number}.eli',
             args.vm_pool_name,
             args.alt_pool_name, '-t' ])
         es.callback(lambda: print('zpool export') or \
@@ -61,6 +63,17 @@ def main():
             '-t', 'zfs',
             f'{args.alt_pool_name}/ROOT/{args.vm_bootenv}',
             args.alt_root ])
+        es.callback(lambda: print('umount bootenv') or \
+            subprocess.check_output([ 'umount', args.alt_root ]))
+
+        print('mount EFI partition')
+        os.makedirs(os.path.join(args.alt_root, 'boot', 'efi'), exist_ok=True)
+        subprocess.check_output([ 'mount',
+            '-t', 'msdosfs',
+            f'/dev/md{args.md_unit}p{args.efi_partition_number}',
+            os.path.join(args.alt_root, 'boot', 'efi') ])
+        es.callback(lambda: print('umount EFI partition') or \
+            subprocess.check_output([ 'umount', os.path.join(args.alt_root, 'boot', 'efi') ]))
 
         print('install')
         env = dict(os.environ)
@@ -70,6 +83,14 @@ def main():
         subprocess.run([ 'make', 'install' ],
             cwd=os.path.join(args.freebsd_src_dir, 'stand'),
             env=env, check=True)
+
+        print('copy to EFI partition')
+        os.makedirs(os.path.join(args.alt_root, 'boot', 'efi', 'efi', 'boot'), exist_ok=True)
+        os.makedirs(os.path.join(args.alt_root, 'boot', 'efi', 'efi', 'freebsd'), exist_ok=True)
+        # shutil.copyfile(os.path.join(args.alt_root, 'boot', 'loader_lua.efi'),
+        #     os.path.join(args.alt_root, 'boot', 'efi', 'efi', 'boot', 'bootx64.efi'))
+        shutil.copyfile(os.path.join(args.alt_root, 'boot', 'loader_lua.efi'),
+            os.path.join(args.alt_root, 'boot', 'efi', 'efi', 'freebsd', 'loader.efi'))
 
 
 if __name__ == '__main__':

@@ -32,6 +32,7 @@ def patch_stand_makefile(args):
         '.if ${MK_LOADER_TPM2_PASSPHRASE} == "yes"',
         'SRCS += tpm2.c',
         'SRCS += tpm2nv.c',
+        'SRCS += gkut2fs.c',
         'CFLAGS += -DLOADER_TPM2_PASSPHRASE',
         '.ifdef LOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT',
         'CFLAGS += -DLOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT=\\"${LOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT}\\"',

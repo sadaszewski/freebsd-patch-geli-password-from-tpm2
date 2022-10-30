@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import os
 import subprocess
 import tempfile
-import shutil
+from contextlib import ExitStack
 
 
 def create_parser():
@@ -15,6 +15,7 @@ def create_parser():
     parser.add_argument('--partition-number', type=int, default=2)
     parser.add_argument('--vm-pool-name', type=str, default='zroot')
     parser.add_argument('--alt-pool-name', type=str, default='altzroot')
+    parser.add_argument('--alt-root', type=str, default='/tmp/altroot')
     return parser
 
 
@@ -22,59 +23,53 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
 
-    print('mdconfig')
-    subprocess.check_output([ 'mdconfig',
-        '-u', str(args.md_unit),
-        '-f', args.vm_image ])
+    with tempfile.TemporaryDirectory() as d, \
+        ExitStack() as es:
 
-    print('geli attach')
-    with tempfile.TemporaryDirectory() as d:
         os.chmod(d, 0o700)
+
+        print('mdconfig')
+        subprocess.check_output([ 'mdconfig',
+            '-u', str(args.md_unit),
+            '-f', args.vm_image ])
+        es.callback(lambda: print('mdconfig destroy') or \
+            subprocess.check_output([ 'mdconfig', '-d', '-u', str(args.md_unit) ]))
+
+        print('geli attach')
         with open(os.path.join(d, 'passfile'), 'w') as f:
             f.write(args.vm_geli_passphrase)
         subprocess.check_output([ 'geli', 'attach',
             '-j', os.path.join(d, 'passfile'),
             f'/dev/md{args.md_unit}p{args.partition_number}' ])
-
-    with tempfile.TemporaryDirectory() as d:
-        print('install to destdir')
-        env = dict(os.environ)
-        env['DESTDIR'] = os.path.join(d, 'stand_destdir')
-        os.makedirs(os.path.join(d, 'stand_destdir', 'usr', 'share', 'man', 'man8'))
-        os.makedirs(os.path.join(d, 'stand_destdir', 'usr', 'share', 'man', 'man5'))
-        subprocess.run([ 'make', 'install' ],
-            cwd=os.path.join(args.freebsd_src_dir, 'stand'),
-            env=env, check=True)
-
-        os.makedirs(os.path.join(d, 'altroot'))
+        es.callback(lambda: print('geli detach') or \
+            subprocess.check_output([ 'geli', 'detach', f'/dev/md{args.md_unit}p{args.partition_number}.eli' ]))
 
         print('zpool import')
+        os.makedirs(args.alt_root, exist_ok=True)
         subprocess.check_output([ 'zpool', 'import',
+            '-f',
             '-N',
-            '-R', os.path.join(d, 'altroot'),
+            '-R', args.alt_root,
             '-d', f'/dev/md{args.md_unit}p{args.partition_number}.eli',
             args.vm_pool_name,
             args.alt_pool_name, '-t' ])
+        es.callback(lambda: print('zpool export') or \
+            subprocess.check_output([ 'zpool', 'export', args.alt_pool_name ]))
 
         print('mount bootenv')
         subprocess.check_output([ 'mount',
             '-t', 'zfs',
             f'{args.alt_pool_name}/ROOT/{args.vm_bootenv}',
-            os.path.join(d, 'altroot') ])
+            args.alt_root ])
 
-        print('copy to bootenv')
-        shutil.copytree(os.path.join(d, 'stand_destdir'),
-            os.path.join(d, 'altroot'),
-            dirs_exist_ok=True)
-
-        print('zpool export')
-        subprocess.check_output([ 'zpool', 'export', args.alt_pool_name ])
-
-    print('geli detach')
-    subprocess.check_output([ 'geli', 'detach', f'/dev/md{args.md_unit}p{args.partition_number}.eli' ])
-
-    print('mdconfig destroy')
-    subprocess.check_output([ 'mdconfig', '-d', '-u', str(args.md_unit) ])
+        print('install')
+        env = dict(os.environ)
+        env['DESTDIR'] = args.alt_root
+        # os.makedirs(os.path.join(d, 'stand_destdir', 'usr', 'share', 'man', 'man8'))
+        # os.makedirs(os.path.join(d, 'stand_destdir', 'usr', 'share', 'man', 'man5'))
+        subprocess.run([ 'make', 'install' ],
+            cwd=os.path.join(args.freebsd_src_dir, 'stand'),
+            env=env, check=True)
 
 
 if __name__ == '__main__':

@@ -33,6 +33,8 @@ def patch_stand_makefile(args):
         'SRCS += tpm2.c',
         'SRCS += tpm2nv.c',
         'SRCS += gkut2fs.c',
+        'SRCS += gkut2dec.c',
+        'SRCS += gkut2tcg.c',
         'CFLAGS += -DLOADER_TPM2_PASSPHRASE',
         '.ifdef LOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT',
         'CFLAGS += -DLOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT=\\"${LOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT}\\"',

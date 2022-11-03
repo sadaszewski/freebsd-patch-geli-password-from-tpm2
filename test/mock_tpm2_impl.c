@@ -5,7 +5,11 @@
 #include <stdio.h>
 #include <malloc.h>
 
-int main() {
+void mock_submit_command(uint32_t, uint8_t*, uint32_t, uint8_t*) {
+    printf("mock_submit_command()\n");
+}
+
+void mock_tpm2_init() {
     size_t tcti_size = 0;
     TSS2_RC ret;
     TSS2_TCTI_CONTEXT *ctx = NULL;
@@ -20,3 +24,4 @@ int main() {
     ret = Tss2_Tcti_Swtpm_Init(ctx, &tcti_size, "host=127.0.0.1,port=12345");
     assert(ret == TSS2_RC_SUCCESS);
 }
+

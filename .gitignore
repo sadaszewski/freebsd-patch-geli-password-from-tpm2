@@ -54,3 +54,6 @@ dkms.conf
 # Project specific
 /test-env/
 
+/test/test_context_load
+/test/test_encrypt_decrypt
+

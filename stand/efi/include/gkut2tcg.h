@@ -22,7 +22,7 @@ static UINT32 SwapBytes32 (UINT32 Value) {
 
 static UINT64 SwapBytes64(UINT64 Value) {
     UINT64 LowerBytes;
-    UINT32 HigherBytes;
+    UINT64 HigherBytes;
     LowerBytes = (UINT64) SwapBytes32((UINT32) Value);
     HigherBytes = (UINT64) SwapBytes32((UINT32) (Value >> 32));
     return (LowerBytes << 32 | HigherBytes);

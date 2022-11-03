@@ -31,6 +31,9 @@ void mock_tpm2_init() {
     assert(ret == TSS2_RC_SUCCESS);
     printf("tcti_size: %llu\n", tcti_size);
 
+    printf("mockup_tpm2_init() :: sizeof(TPMS_CONTEXT): %lld\n", sizeof(TPMS_CONTEXT));
+    printf("MAX_CONTEXT_SIZE: %d\n", TPM2_MAX_CONTEXT_SIZE);
+
     ctx = malloc(tcti_size);
     assert(ctx != NULL);
 

@@ -50,6 +50,14 @@ void test_01_decrypt() {
     assert(fread(&ContextBlob.buffer[0], BlobSize, 1, f) == 1);
     ContextBlob.size = BlobSize;
     fclose(f);
+    printf("ContextBlob.buffer: ");
+    for (int i = 0; i < 32; i++) {
+        printf("%02x ", ContextBlob.buffer[i]);
+    }
+    printf("\n");
+    TPMS_CONTEXT_DATA *ContextData = (TPMS_CONTEXT_DATA*) &ContextBlob.buffer[0];
+    printf("ContextData->integrity.size: %d\n", ContextData->integrity.size);
+    printf("----> %d\n", ((TPM2B_CONTEXT_SENSITIVE*) (((UINT8*) ContextData) + 2))->size);
     printf("sizeof(TPMS_CONTEXT): %d\n", sizeof(TPMS_CONTEXT));
     Sequence = SwapBytes64_(Sequence);
     SavedHandle = SwapBytes32_(SavedHandle);

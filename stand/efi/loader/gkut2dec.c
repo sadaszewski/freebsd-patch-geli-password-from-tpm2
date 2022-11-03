@@ -174,3 +174,49 @@ Done:
   
 	return Status;
 }
+
+EFI_STATUS Tpm2ContextLoad(UINT64 Sequence, TPMI_DH_CONTEXT SavedHandle, TPMI_RH_HIERARCHY Hierarchy,
+    TPM2B_CONTEXT_DATA *ContextBlob, TPMI_DH_CONTEXT *LoadedHandle) {
+
+    EFI_STATUS Status;
+    TPM2_CONTEXT_LOAD_COMMAND SendBuffer;
+    TPM2_CONTEXT_LOAD_RESPONSE RecvBuffer;
+    UINT8 *Buffer;
+    UINT32 SendBufferSize;
+    UINT32 RecvBufferSize;
+    TPM_RC ResponseCode;
+
+    SendBuffer.Header.tag = SwapBytes16(TPM_ST_NO_SESSIONS);
+    SendBuffer.Header.commandCode = SwapBytes32(TPM_CC_ContextLoad);
+
+    SendBuffer.Context.sequence = SwapBytes64(Sequence);
+    SendBuffer.Context.savedHandle = SwapBytes32(SavedHandle);
+    SendBuffer.Context.hierarchy = SwapBytes32(Hierarchy);
+    SendBuffer.Context.contextBlob.size = SwapBytes16(ContextBlob->size);
+    Buffer = (UINT8*) &SendBuffer.Context.contextBlob.buffer[0];
+    memcpy(Buffer, &ContextBlob->buffer[0], ContextBlob->size);
+    Buffer += ContextBlob->size;
+
+    SendBufferSize = (UINT32)(Buffer - (UINT8*) &SendBuffer);
+    SendBuffer.Header.paramSize = SendBufferSize;
+	
+    RecvBufferSize = sizeof (RecvBuffer);
+	Status = Tpm2SubmitCommand (SendBufferSize, (UINT8 *)&SendBuffer, &RecvBufferSize, (UINT8 *)&RecvBuffer);
+	if (EFI_ERROR (Status)) {
+		return Status;
+	}
+
+	if (RecvBufferSize < sizeof (TPM2_RESPONSE_HEADER)) {
+		printf("Tpm2ContextLoad - RecvBufferSize Error - %x\n", RecvBufferSize);
+		return EFI_DEVICE_ERROR;
+	}
+	ResponseCode = SwapBytes32(RecvBuffer.Header.responseCode);
+	if (ResponseCode != TPM_RC_SUCCESS) {
+		printf("Tpm2ContextLoad - responseCode - %x\n", ResponseCode);
+        return EFI_DEVICE_ERROR;
+	}
+
+    *LoadedHandle = SwapBytes32(RecvBuffer.LoadedHandle);
+
+    return EFI_SUCCESS;
+}

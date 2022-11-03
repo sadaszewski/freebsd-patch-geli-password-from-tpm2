@@ -5,8 +5,21 @@
 #include <stdio.h>
 #include <malloc.h>
 
-void mock_submit_command(uint32_t, uint8_t*, uint32_t, uint8_t*) {
+static TSS2_TCTI_CONTEXT *TctiContext;
+
+int mock_submit_command(uint32_t InSize, uint8_t *InData, uint32_t OutSize, uint8_t *OutData) {
     printf("mock_submit_command()\n");
+    TSS2_RC res = Tss2_Tcti_Transmit(TctiContext, InSize, InData);
+    if (res != 0) {
+        return 1;
+    }
+    size_t OutSize_sz = OutSize;
+    printf("OutSize_sz: %lld\n", OutSize_sz);
+    res = Tss2_Tcti_Receive(TctiContext, &OutSize_sz, OutData, -1);
+    if (res != 0) {
+        return 2;
+    }
+    return 0;
 }
 
 void mock_tpm2_init() {
@@ -23,5 +36,7 @@ void mock_tpm2_init() {
 
     ret = Tss2_Tcti_Swtpm_Init(ctx, &tcti_size, "host=127.0.0.1,port=12345");
     assert(ret == TSS2_RC_SUCCESS);
+
+    TctiContext = ctx;
 }
 

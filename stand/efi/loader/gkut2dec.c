@@ -198,7 +198,9 @@ EFI_STATUS Tpm2ContextLoad(UINT64 Sequence, TPMI_DH_CONTEXT SavedHandle, TPMI_RH
     Buffer += ContextBlob->size;
 
     SendBufferSize = (UINT32)(Buffer - (UINT8*) &SendBuffer);
-    SendBuffer.Header.paramSize = SendBufferSize;
+    SendBuffer.Header.paramSize = SwapBytes32(SendBufferSize);
+    printf("SendBufferSize: %d\n", SendBufferSize);
+    printf("ContextBlob->size: %d\n", ContextBlob->size);
 	
     RecvBufferSize = sizeof (RecvBuffer);
 	Status = Tpm2SubmitCommand (SendBufferSize, (UINT8 *)&SendBuffer, &RecvBufferSize, (UINT8 *)&RecvBuffer);

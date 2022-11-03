@@ -11,6 +11,7 @@ void mock_submit_command(UINT32, UINT8*, UINT32, UINT8*);
 EFI_STATUS DummyTpm2SubmitCommand(EFI_TCG2_PROTOCOL*, UINT32 InSize, UINT8 *InBuffer, UINT32 OutSize, UINT8 *OutBuffer) {
     printf("DummyTpm2SubmitCommand()\n");
     mock_submit_command(InSize, InBuffer, OutSize, OutBuffer);
+    return EFI_SUCCESS;
 }
 
 EFI_TCG2_PROTOCOL DummyTcgProtocol = {
@@ -23,6 +24,7 @@ void DummyExit(void*, int, int, void*) {
 
 EFI_STATUS DummyLocateProtocol(EFI_GUID*, void*, void **Result) {
     *Result = &DummyTcgProtocol;
+    return EFI_SUCCESS;
 }
 
 EFI_BOOT_SERVICES BS_ = {

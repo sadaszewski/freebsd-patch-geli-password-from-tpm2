@@ -59,6 +59,8 @@ typedef struct {
 typedef struct {
     TPM2_COMMAND_HEADER     Header;
     TPMI_RH_HIERARCHY       PrimaryHandle;
+    UINT32                  AuthSessionSize;
+    TPMS_AUTH_COMMAND       AuthSession;
     TPM2B_SENSITIVE_CREATE  InSensitive;
     TPM2B_PUBLIC            InPublic;
     TPM2B_DATA              OutsideInfo;
@@ -277,4 +279,45 @@ EFI_STATUS Tpm2ContextLoad(UINT64 Sequence, TPMI_DH_CONTEXT SavedHandle, TPMI_RH
     *LoadedHandle = SwapBytes32(RecvBuffer.LoadedHandle);
 
     return EFI_SUCCESS;
+}
+
+
+EFI_STATUS Tpm2CreatePrimary(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND *AuthSession, // in
+    TPM2B_SENSITIVE_CREATE *InSensitive, // in
+    TPM2B_PUBLIC *InPublic, TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION PcrSelection, // in
+    TPM_HANDLE *ObjectHandle, TPM2B_PUBLIC *OutPublic, TPM2B_CREATION_DATA *CreationData, // out
+    TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name) { // out
+
+    EFI_STATUS Status;
+    TPM2_CREATE_PRIMARY_COMMAND SendBuffer;
+    TPM2_CREATE_PRIMARY_RESPONSE RecvBuffer;
+    UINT8 *Buffer;
+    UINT32 SendBufferSize;
+    UINT32 RecvBufferSize;
+    TPM_RC ResponseCode;
+    UINT32 SessionInfoSize;
+
+    SendBuffer.Header.tag = SwapBytes16(TPM_ST_SESSIONS);
+    SendBuffer.Header.commandCode = SwapBytes32(TPM_CC_CreatePrimary);
+
+    SendBuffer.PrimaryHandle = PrimaryHandle;
+
+    Buffer = (UINT8*) &SendBuffer.AuthSession;
+    SessionInfoSize = CopyAuthSessionCommand(AuthSession, Buffer);
+    Buffer += SessionInfoSize;
+    SendBuffer.AuthSessionSize = SwapBytes32(SessionInfoSize);
+
+    // SendBuffer.InSensitive.size = ??
+    UINT16 *SensitiveSize = (UINT16*) Buffer;
+    Buffer += sizeof(UINT16);
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InSensitive->sensitive.userAuth.size));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, &InSensitive->sensitive.userAuth.buffer[0], InSensitive->sensitive.userAuth.size);
+    Buffer += InSensitive->sensitive.userAuth.size;
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InSensitive->sensitive.data.size));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, &InSensitive->sensitive.data.buffer[0], InSensitive->sensitive.data.size);
+    Buffer += InSensitive->sensitive.data.size;
+    WriteUnaligned16(SensitiveSize, SwapBytes16( (UINT16)( Buffer - (UINT8*) SensitiveSize - 2  ) ) );
+    
 }

@@ -282,6 +282,46 @@ EFI_STATUS Tpm2ContextLoad(UINT64 Sequence, TPMI_DH_CONTEXT SavedHandle, TPMI_RH
 }
 
 
+EFI_STATUS Tpm2CreatePrimary_Preamble(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND *AuthSession,
+    TPM2B_SENSITIVE_CREATE *InSensitive, UINT8 **BufferInOut) {
+
+    UINT8 *Buffer = *BufferInOut;
+
+    UINT32 SessionInfoSize;
+    
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(TPM_ST_SESSIONS));
+    Buffer += sizeof(UINT16);
+    Buffer += sizeof(UINT32); // skip paramSize for now
+    WriteUnaligned32((UINT32*) Buffer, SwapBytes32(TPM_CC_CreatePrimary));
+    Buffer += sizeof(UINT32);
+
+    WriteUnaligned32((UINT32*) Buffer, SwapBytes32(PrimaryHandle));
+    Buffer += sizeof(UINT32);
+
+    UINT8 *AuthSessionSize = Buffer;
+    Buffer += sizeof(UINT32);
+    SessionInfoSize = CopyAuthSessionCommand(AuthSession, Buffer);
+    Buffer += SessionInfoSize;
+    WriteUnaligned32((UINT32*) AuthSessionSize, SwapBytes32(SessionInfoSize));
+
+    // SendBuffer.InSensitive.size == ??
+    UINT8 *SensitiveSize = Buffer;
+    Buffer += sizeof(UINT16);
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InSensitive->sensitive.userAuth.size));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, &InSensitive->sensitive.userAuth.buffer[0], InSensitive->sensitive.userAuth.size);
+    Buffer += InSensitive->sensitive.userAuth.size;
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InSensitive->sensitive.data.size));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, &InSensitive->sensitive.data.buffer[0], InSensitive->sensitive.data.size);
+    Buffer += InSensitive->sensitive.data.size;
+    WriteUnaligned16((UINT16*) SensitiveSize, SwapBytes16( (UINT16)( Buffer - (UINT8*) SensitiveSize - 2  ) ) );
+
+    *BufferInOut = Buffer;
+
+    return EFI_SUCCESS;
+}
+
 EFI_STATUS Tpm2CreatePrimary(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND *AuthSession, // in
     TPM2B_SENSITIVE_CREATE *InSensitive, // in
     TPM2B_PUBLIC *InPublic, TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION PcrSelection, // in
@@ -334,4 +374,25 @@ EFI_STATUS Tpm2CreatePrimary(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND 
     memcpy(Buffer, &InPublic->publicArea.authPolicy.buffer[0], InPublic->publicArea.authPolicy.size);
     Buffer += InPublic->publicArea.authPolicy.size;
     // WriteUnaligned16(InPublic.TPMU_PUBLIC_PARAMS)
+}
+
+EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND *AuthSession, // in
+    TPM2B_SENSITIVE_CREATE *InSensitive, // in
+    TPMI_ALG_HASH NameAlg, TPMA_OBJECT *ObjectAttributes, TPM2B_DIGEST *AuthPolicy, // in
+    TPMI_AES_KEY_BITS KeyBits, TPMI_ALG_SYM_MODE SymMode, // in 
+    TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION PcrSelection, // in
+    TPM_HANDLE *ObjectHandle, TPM2B_PUBLIC *OutPublic, TPM2B_CREATION_DATA *CreationData, // out
+    TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name) { // out
+
+    TPM2_CREATE_PRIMARY_COMMAND SendBuffer;
+    UINT32 SendBufferSize;
+    EFI_STATUS Status;
+    UINT8 *Buffer;
+
+    Buffer = (UINT8*) &SendBuffer;
+    Status = Tpm2CreatePrimary_Preamble(PrimaryHandle, AuthSession,
+        InSensitive, (UINT8**) &Buffer);
+    if (EFI_ERROR(Status)) {
+        return Status;
+    }
 }

@@ -37,6 +37,16 @@ typedef struct {
 } TPM2_ENCRYPT_DECRYPT_RESPONSE;
 
 typedef struct {
+    TPM2_COMMAND_HEADER Header;
+    TPMI_DH_CONTEXT SaveHandle;
+} TPM2_CONTEXT_SAVE_COMMAND;
+
+typedef struct {
+    TPM2_RESPONSE_HEADER Header;
+    TPMS_CONTEXT Context;
+} TPM2_CONTEXT_SAVE_RESPONSE;
+
+typedef struct {
     TPM2_COMMAND_HEADER   Header;
     TPMS_CONTEXT          Context;
 } TPM2_CONTEXT_LOAD_COMMAND;
@@ -174,6 +184,52 @@ Done:
   
 	return Status;
 }
+
+
+EFI_STATUS Tpm2ContextSave(TPMI_DH_CONTEXT SaveHandle, TPMS_CONTEXT *Context) {
+    EFI_STATUS Status;
+    TPM2_CONTEXT_SAVE_COMMAND SendBuffer;
+    TPM2_CONTEXT_SAVE_RESPONSE RecvBuffer;
+    UINT8 *Buffer;
+    UINT32 SendBufferSize;
+    UINT32 RecvBufferSize;
+    TPM_RC ResponseCode;
+
+    SendBuffer.Header.tag = SwapBytes16(TPM_ST_NO_SESSIONS);
+    SendBuffer.Header.commandCode = SwapBytes32(TPM_CC_ContextSave);
+
+    SendBuffer.SaveHandle = SwapBytes32(SaveHandle);
+
+    SendBufferSize = sizeof(SendBuffer);
+    SendBuffer.Header.paramSize = SwapBytes32(SendBufferSize);
+	
+    RecvBufferSize = sizeof (RecvBuffer);
+	Status = Tpm2SubmitCommand (SendBufferSize, (UINT8 *)&SendBuffer, &RecvBufferSize, (UINT8 *)&RecvBuffer);
+	if (EFI_ERROR (Status)) {
+		return Status;
+	}
+
+	if (RecvBufferSize < sizeof (TPM2_RESPONSE_HEADER)) {
+		printf("Tpm2ContextSave - RecvBufferSize Error - %x\n", RecvBufferSize);
+		return EFI_DEVICE_ERROR;
+	}
+	ResponseCode = SwapBytes32(RecvBuffer.Header.responseCode);
+	if (ResponseCode != TPM_RC_SUCCESS) {
+		printf("Tpm2ContextSave - responseCode - %x\n", ResponseCode);
+        return EFI_DEVICE_ERROR;
+	}
+
+    Context->sequence = SwapBytes64(RecvBuffer.Context.sequence);
+    Context->savedHandle = SwapBytes32(RecvBuffer.Context.savedHandle);
+    Context->hierarchy = SwapBytes32(RecvBuffer.Context.hierarchy);
+    Context->contextBlob.size = SwapBytes16(RecvBuffer.Context.contextBlob.size);
+    memcpy(&Context->contextBlob.buffer[0],
+        &RecvBuffer.Context.contextBlob.buffer[0], 
+        Context->contextBlob.size);
+
+    return EFI_SUCCESS;
+}
+
 
 EFI_STATUS Tpm2ContextLoad(UINT64 Sequence, TPMI_DH_CONTEXT SavedHandle, TPMI_RH_HIERARCHY Hierarchy,
     TPM2B_CONTEXT_DATA *ContextBlob, TPMI_DH_CONTEXT *LoadedHandle) {

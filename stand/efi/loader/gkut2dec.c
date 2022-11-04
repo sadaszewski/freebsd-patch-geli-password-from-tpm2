@@ -307,7 +307,7 @@ EFI_STATUS Tpm2CreatePrimary(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND 
     Buffer += SessionInfoSize;
     SendBuffer.AuthSessionSize = SwapBytes32(SessionInfoSize);
 
-    // SendBuffer.InSensitive.size = ??
+    // SendBuffer.InSensitive.size == ??
     UINT16 *SensitiveSize = (UINT16*) Buffer;
     Buffer += sizeof(UINT16);
     WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InSensitive->sensitive.userAuth.size));
@@ -320,4 +320,18 @@ EFI_STATUS Tpm2CreatePrimary(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND 
     Buffer += InSensitive->sensitive.data.size;
     WriteUnaligned16(SensitiveSize, SwapBytes16( (UINT16)( Buffer - (UINT8*) SensitiveSize - 2  ) ) );
     
+    // SendBuffer.InPublic.size == ??
+    UINT16 *PublicSize = (UINT16*) Buffer;
+    Buffer += sizeof(UINT16);
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InPublic->publicArea.type));
+    Buffer += sizeof(UINT16);
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InPublic->publicArea.nameAlg));
+    Buffer += sizeof(UINT16);
+    WriteUnaligned32((UINT32*) Buffer, SwapBytes32(*(UINT32*)&InPublic->publicArea.objectAttributes));
+    Buffer += sizeof(UINT32);
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InPublic->publicArea.authPolicy.size));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, &InPublic->publicArea.authPolicy.buffer[0], InPublic->publicArea.authPolicy.size);
+    Buffer += InPublic->publicArea.authPolicy.size;
+    // WriteUnaligned16(InPublic.TPMU_PUBLIC_PARAMS)
 }

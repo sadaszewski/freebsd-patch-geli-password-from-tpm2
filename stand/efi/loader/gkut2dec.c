@@ -405,7 +405,7 @@ EFI_STATUS Tpm2CreatePrimary_Epilogue(TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTIO
     WriteUnaligned32((UINT32*)(BufferStart + sizeof(UINT16)), SwapBytes32(SendBufferSize));
 
     EFI_STATUS Status;
-    TPM2_CREATE_PRIMARY_RESPONSE ResponseBuffer;
+    TPM2_CREATE_PRIMARY_RESPONSE ResponseBuffer = {};
     UINT32 ResponseBufferSize;
 
     ResponseBufferSize = sizeof(ResponseBuffer);

@@ -376,11 +376,77 @@ EFI_STATUS Tpm2CreatePrimary(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND 
     // WriteUnaligned16(InPublic.TPMU_PUBLIC_PARAMS)
 }
 
+EFI_STATUS Tpm2CreatePrimary_Epilogue(TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION *PcrSelection, // in
+    TPM_HANDLE *ObjectHandle, TPM2B_PUBLIC *OutPublic, TPM2B_CREATION_DATA *CreationData, // out
+    TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name, // out
+    UINT8 *BufferStart, UINT8* BufferCur) { // state
+
+    UINT8 *Buffer = BufferCur;
+
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(OutsideInfo->size));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, &OutsideInfo->buffer[0], OutsideInfo->size);
+    Buffer += OutsideInfo->size;
+
+    WriteUnaligned32((UINT32*) Buffer, SwapBytes32(PcrSelection->count));
+    Buffer += sizeof(UINT32);
+    for (int i = 0; i < PcrSelection->count; i++) {
+        WriteUnaligned16((UINT16*) Buffer, SwapBytes16(PcrSelection->pcrSelections[i].hash));
+        Buffer += sizeof(UINT16);
+        *Buffer = PcrSelection->pcrSelections[i].sizeofSelect;
+        Buffer += sizeof(UINT8);
+        memcpy(Buffer, &PcrSelection->pcrSelections[i].pcrSelect[0],
+            PcrSelection->pcrSelections[i].sizeofSelect);
+        Buffer += PcrSelection->pcrSelections[i].sizeofSelect;
+    }
+
+    UINT32 SendBufferSize;
+    SendBufferSize = (UINT32)(Buffer - BufferStart);
+    WriteUnaligned32((UINT32*)(BufferStart + sizeof(UINT16)), SwapBytes32(SendBufferSize));
+
+    EFI_STATUS Status;
+    TPM2_CREATE_PRIMARY_RESPONSE ResponseBuffer;
+    UINT32 ResponseBufferSize;
+
+    ResponseBufferSize = sizeof(ResponseBuffer);
+    Status = Tpm2SubmitCommand(SendBufferSize, BufferStart, &ResponseBufferSize, (UINT8*) &ResponseBuffer);
+    if (EFI_ERROR(Status)) {
+        return Status;
+    }
+
+    // TODO: write out output
+	if (ResponseBufferSize < sizeof (TPM2_RESPONSE_HEADER)) {
+		printf("Tpm2CreatePrimary_Epilogue - RecvBufferSize Error - %x\n", ResponseBufferSize);
+		return EFI_DEVICE_ERROR;
+	}
+	TPM_RC ResponseCode;
+    ResponseCode = SwapBytes32(ResponseBuffer.Header.responseCode);
+	if (ResponseCode != TPM_RC_SUCCESS) {
+		printf("Tpm2CreatePrimary_Epilogue - responseCode - %x\n", ResponseCode);
+        return EFI_DEVICE_ERROR;
+	}
+
+    *ObjectHandle = SwapBytes32(ResponseBuffer.ObjectHandle);
+    OutPublic->size = SwapBytes16(ResponseBuffer.OutPublic.size);
+    memcpy(&OutPublic->publicArea, &ResponseBuffer.OutPublic.publicArea, OutPublic->size); // TODO: decode
+    CreationData->size = SwapBytes16(ResponseBuffer.CreationData.size);
+    memcpy(&CreationData->creationData, &ResponseBuffer.CreationData.creationData, CreationData->size); // TODO: decode
+    CreationHash->size = SwapBytes16(ResponseBuffer.CreationHash.size);
+    memcpy(&CreationHash->buffer[0], &ResponseBuffer.CreationHash.buffer[0], CreationHash->size);
+    CreationTicket->tag = SwapBytes16(ResponseBuffer.CreationTicket.tag);
+    CreationTicket->hierarchy = SwapBytes32(ResponseBuffer.CreationTicket.hierarchy);
+    CreationTicket->digest.size = SwapBytes16(ResponseBuffer.CreationTicket.digest.size);
+    memcpy(&CreationTicket->digest.buffer[0], &ResponseBuffer.CreationTicket.digest.buffer[0],
+        CreationTicket->digest.size);
+
+    return EFI_SUCCESS;
+}
+
 EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND *AuthSession, // in
     TPM2B_SENSITIVE_CREATE *InSensitive, // in
     TPMI_ALG_HASH NameAlg, TPMA_OBJECT *ObjectAttributes, TPM2B_DIGEST *AuthPolicy, // in
     TPMI_AES_KEY_BITS KeyBits, TPMI_ALG_SYM_MODE SymMode, // in 
-    TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION PcrSelection, // in
+    TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION *PcrSelection, // in
     TPM_HANDLE *ObjectHandle, TPM2B_PUBLIC *OutPublic, TPM2B_CREATION_DATA *CreationData, // out
     TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name) { // out
 
@@ -395,4 +461,32 @@ EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMA
     if (EFI_ERROR(Status)) {
         return Status;
     }
+
+    UINT8 *PublicSize = Buffer; // write it later
+    Buffer += sizeof(UINT16);
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(TPM_ALG_AES));
+    Buffer += sizeof(UINT16);
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(NameAlg));
+    Buffer += sizeof(UINT16);
+    WriteUnaligned32((UINT32*) Buffer, SwapBytes32(*(UINT32*) ObjectAttributes));
+    Buffer += sizeof(UINT32);
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(AuthPolicy->size));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, &AuthPolicy->buffer[0], AuthPolicy->size);
+    Buffer += AuthPolicy->size;
+    TPMU_PUBLIC_PARMS PublicParms;
+    PublicParms.symDetail.algorithm = SwapBytes16(TPM_ALG_AES);
+    PublicParms.symDetail.keyBits.aes = SwapBytes16(KeyBits);
+    PublicParms.symDetail.mode.aes = SwapBytes16(SymMode);
+    memcpy(Buffer, &PublicParms, sizeof(TPMU_PUBLIC_PARMS));
+    Buffer += sizeof(TPMU_PUBLIC_PARMS);
+    WriteUnaligned16((UINT16*) Buffer, 0); // unique.sym
+    Buffer += sizeof(UINT16);
+    WriteUnaligned16((UINT16*) PublicSize, SwapBytes16( (UINT16)( Buffer - PublicSize - 2 ) )); // write it here
+
+    Status = Tpm2CreatePrimary_Epilogue(OutsideInfo, PcrSelection, // in
+        ObjectHandle, OutPublic, CreationData, // out
+        CreationHash, CreationTicket, Name, (UINT8*) &SendBuffer, Buffer);
+    return Status;
 }
+

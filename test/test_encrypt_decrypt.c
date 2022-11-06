@@ -235,6 +235,12 @@ void test_04_create_primary_aes() {
         OutPublic.publicArea.objectAttributes.fixedParent
         );
 
+    printf("authPolicy.size: %d\n", OutPublic.publicArea.authPolicy.size);
+
+    printf("symDef.algorithm: 0x%04X\n", OutPublic.publicArea.parameters.symDetail.algorithm);
+    printf("symDef.keyBits.aea: 0x%04X\n", OutPublic.publicArea.parameters.symDetail.keyBits.aes);
+    printf("symDef.mode.aes: 0x%04X\n", OutPublic.publicArea.parameters.symDetail.mode.aes);
+
     printf("Success!!!\n");
 }
 

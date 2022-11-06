@@ -413,10 +413,35 @@ void Uint32ToObjectAttributes(UINT32 AttrIn, TPMA_OBJECT *AttrOut) {
     AttrOut->reserved19_31 = (AttrIn & 0xd); AttrIn >>= 13;
 }
 
+EFI_STATUS DecodePublicParamsAndId_Aes(UINT8 **BufferInOut, TPM2B_PUBLIC *OutPublic) {
+    UINT8 *Buffer = *BufferInOut;
+
+    /*memcpy(&OutPublic->publicArea.parameters,
+        Buffer,
+        sizeof(TPMU_PUBLIC_PARMS));
+    Buffer += sizeof(TPMU_PUBLIC_PARMS);*/
+
+    TPMT_SYM_DEF_OBJECT *symDef = (TPMT_SYM_DEF_OBJECT*) Buffer;
+    Buffer += sizeof(TPMT_SYM_DEF_OBJECT);
+    OutPublic->publicArea.parameters.symDetail.algorithm = SwapBytes16(symDef->algorithm);
+    OutPublic->publicArea.parameters.symDetail.keyBits.aes = SwapBytes16(symDef->keyBits.aes);
+    OutPublic->publicArea.parameters.symDetail.mode.aes = SwapBytes16(symDef->mode.aes);
+
+    OutPublic->publicArea.unique.sym.size = SwapBytes16(ReadUnaligned16((UINT16*) Buffer));
+    Buffer += sizeof(UINT16);
+    memcpy(&OutPublic->publicArea.unique.sym.buffer[0], Buffer, OutPublic->publicArea.unique.sym.size);
+    Buffer += OutPublic->publicArea.unique.sym.size;
+
+    *BufferInOut = Buffer;
+
+    return EFI_SUCCESS;
+}
+
 EFI_STATUS Tpm2CreatePrimary_Epilogue(TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION *PcrSelection, // in
     TPM_HANDLE *ObjectHandle, TPM2B_PUBLIC *OutPublic, TPM2B_CREATION_DATA *CreationData, // out
     TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name, // out
-    UINT8 *BufferStart, UINT8* BufferCur) { // state
+    UINT8 *BufferStart, UINT8* BufferCur, // state
+    EFI_STATUS(*DecodePublicParamsAndId_Callback)(UINT8**, TPM2B_PUBLIC*)) { // callback
 
     UINT8 *Buffer = BufferCur;
 
@@ -469,7 +494,19 @@ EFI_STATUS Tpm2CreatePrimary_Epilogue(TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTIO
     OutPublic->publicArea.type = SwapBytes16(OutPublic->publicArea.type); 
     OutPublic->publicArea.nameAlg = SwapBytes16(OutPublic->publicArea.nameAlg);
     Uint32ToObjectAttributes(SwapBytes32(*(UINT32*)&OutPublic->publicArea.objectAttributes),
-        &OutPublic->publicArea.objectAttributes); 
+        &OutPublic->publicArea.objectAttributes);
+    Buffer = (UINT8*) &ResponseBuffer.OutPublic.publicArea.authPolicy;
+    OutPublic->publicArea.authPolicy.size = SwapBytes16(ReadUnaligned16((UINT16*) Buffer));
+    Buffer += sizeof(UINT16);
+    memcpy(&OutPublic->publicArea.authPolicy.buffer[0],
+        &ResponseBuffer.OutPublic.publicArea.authPolicy.buffer[0],
+        OutPublic->publicArea.authPolicy.size);
+    Buffer += OutPublic->publicArea.authPolicy.size;
+
+    Status = DecodePublicParamsAndId_Callback(&Buffer, OutPublic);
+    if (EFI_ERROR(Status)) {
+        return Status;
+    }
 
     CreationData->size = SwapBytes16(ResponseBuffer.CreationData.size);
     memcpy(&CreationData->creationData, &ResponseBuffer.CreationData.creationData, CreationData->size); // TODO: decode
@@ -552,7 +589,8 @@ EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMA
 
     Status = Tpm2CreatePrimary_Epilogue(OutsideInfo, PcrSelection, // in
         ObjectHandle, OutPublic, CreationData, // out
-        CreationHash, CreationTicket, Name, (UINT8*) &SendBuffer, Buffer);
+        CreationHash, CreationTicket, Name, (UINT8*) &SendBuffer, Buffer,
+        DecodePublicParamsAndId_Aes);
     return Status;
 }
 

@@ -228,6 +228,13 @@ void test_04_create_primary_aes() {
         return;
     }
 
+    printf("ObjectHandle: 0x%08X\n", ObjectHandle);
+    printf("OutPublic.nameAlg: 0x%04X\n", OutPublic.publicArea.nameAlg);
+    printf("OutPublic.objectAttributes: %d %d\n",
+        OutPublic.publicArea.objectAttributes.fixedTPM,
+        OutPublic.publicArea.objectAttributes.fixedParent
+        );
+
     printf("Success!!!\n");
 }
 
@@ -301,7 +308,7 @@ int main() {
     //test_01_save_context();
     //test_02_load_context();
     //test_03_decrypt();
-    //test_04_create_primary_aes();
-    test_05_encrypt();
+    test_04_create_primary_aes();
+    // test_05_encrypt();
     BS->Exit(IH, EFI_INVALID_PARAMETER, 0, NULL);
 }

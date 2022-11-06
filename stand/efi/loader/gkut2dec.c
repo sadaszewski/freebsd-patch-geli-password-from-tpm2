@@ -72,11 +72,13 @@ typedef struct {
 typedef struct {
     TPM2_RESPONSE_HEADER    Header;
     TPM_HANDLE              ObjectHandle;
+    UINT32                  AuthSessionSize;
     TPM2B_PUBLIC            OutPublic;
     TPM2B_CREATION_DATA     CreationData;
     TPM2B_DIGEST            CreationHash;
     TPMT_TK_CREATION        CreationTicket;
     TPM2B_NAME              Name;
+    TPMS_AUTH_RESPONSE      AuthSession;
 } TPM2_CREATE_PRIMARY_RESPONSE;
 
 typedef struct {
@@ -392,6 +394,25 @@ EFI_STATUS Tpm2CreatePrimary(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND 
     // WriteUnaligned16(InPublic.TPMU_PUBLIC_PARAMS)
 }
 
+void Uint32ToObjectAttributes(UINT32 AttrIn, TPMA_OBJECT *AttrOut) {
+    AttrOut->reserved1 = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->fixedTPM = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->stClear = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->reserved4 = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->fixedParent = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->sensitiveDataOrigin = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->userWithAuth = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->adminWithPolicy = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->reserved8_9 = (AttrIn & 0x3); AttrIn >>= 2;
+    AttrOut->noDA = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->encryptedDuplication = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->reserved12_15 = (AttrIn & 0xF); AttrIn >>= 4;
+    AttrOut->restricted = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->decrypt = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->sign = (AttrIn & 0x1); AttrIn >>= 1;
+    AttrOut->reserved19_31 = (AttrIn & 0xd); AttrIn >>= 13;
+}
+
 EFI_STATUS Tpm2CreatePrimary_Epilogue(TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION *PcrSelection, // in
     TPM_HANDLE *ObjectHandle, TPM2B_PUBLIC *OutPublic, TPM2B_CREATION_DATA *CreationData, // out
     TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name, // out
@@ -445,6 +466,11 @@ EFI_STATUS Tpm2CreatePrimary_Epilogue(TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTIO
     *ObjectHandle = SwapBytes32(ResponseBuffer.ObjectHandle);
     OutPublic->size = SwapBytes16(ResponseBuffer.OutPublic.size);
     memcpy(&OutPublic->publicArea, &ResponseBuffer.OutPublic.publicArea, OutPublic->size); // TODO: decode
+    OutPublic->publicArea.type = SwapBytes16(OutPublic->publicArea.type); 
+    OutPublic->publicArea.nameAlg = SwapBytes16(OutPublic->publicArea.nameAlg);
+    Uint32ToObjectAttributes(SwapBytes32(*(UINT32*)&OutPublic->publicArea.objectAttributes),
+        &OutPublic->publicArea.objectAttributes); 
+
     CreationData->size = SwapBytes16(ResponseBuffer.CreationData.size);
     memcpy(&CreationData->creationData, &ResponseBuffer.CreationData.creationData, CreationData->size); // TODO: decode
     CreationHash->size = SwapBytes16(ResponseBuffer.CreationHash.size);

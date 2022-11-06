@@ -18,6 +18,7 @@ EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMA
     TPM_HANDLE *ObjectHandle, TPM2B_PUBLIC *OutPublic, TPM2B_CREATION_DATA *CreationData, // out
     TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name); // out
 
+UINT32 ObjectAttributesToUint32(TPMA_OBJECT *ObjectAttributes);
 
 EFI_STATUS Tpm2StartAuthSession (
 	TPMI_DH_OBJECT			TpmKey,
@@ -152,7 +153,7 @@ void test_04_create_primary_aes() {
 	    TPM_RH_NULL,	// Bind
 	    &NonceCaller,
 	    &Salt,
-	    TPM_SE_POLICY,	// SessionType
+	    TPM_SE_HMAC,	// SessionType
 	    &Symmetric,
 	    TPM_ALG_SHA256,	//AuthHash
 	    &SessionHandle,
@@ -177,13 +178,15 @@ void test_04_create_primary_aes() {
             .data = { .size = 0 }
         }
     };
-    TPMI_ALG_HASH NameAlg = TPM_ALG_NULL;
+    TPMI_ALG_HASH NameAlg = TPM_ALG_SHA256;
     TPMA_OBJECT ObjectAttributes = {
        .fixedTPM = 1,
        .fixedParent = 1,
        .decrypt = 1,
-       .sensitiveDataOrigin = 1
+       .sensitiveDataOrigin = 1,
+       .restricted = 1
     };
+    printf("ObjectAttributes = 0x%08X\n", ObjectAttributesToUint32(&ObjectAttributes));
     TPM2B_DIGEST AuthPolicy = {
         .size = 0
     };

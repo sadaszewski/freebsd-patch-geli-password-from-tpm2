@@ -305,7 +305,7 @@ EFI_STATUS Tpm2CreatePrimary_Preamble(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH
     WriteUnaligned32((UINT32*) AuthSessionSize, SwapBytes32(SessionInfoSize));
 
     // SendBuffer.InSensitive.size == ??
-    UINT8 *SensitiveSize = Buffer;
+    UINT8 *SensitiveSize = Buffer; // do not write it yet because we don't know it
     Buffer += sizeof(UINT16);
     WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InSensitive->sensitive.userAuth.size));
     Buffer += sizeof(UINT16);
@@ -315,7 +315,7 @@ EFI_STATUS Tpm2CreatePrimary_Preamble(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH
     Buffer += sizeof(UINT16);
     memcpy(Buffer, &InSensitive->sensitive.data.buffer[0], InSensitive->sensitive.data.size);
     Buffer += InSensitive->sensitive.data.size;
-    WriteUnaligned16((UINT16*) SensitiveSize, SwapBytes16( (UINT16)( Buffer - (UINT8*) SensitiveSize - 2  ) ) );
+    WriteUnaligned16((UINT16*) SensitiveSize, SwapBytes16( (UINT16)( Buffer - (UINT8*) SensitiveSize - 2  ) ) ); // write it here
 
     *BufferInOut = Buffer;
 
@@ -442,6 +442,27 @@ EFI_STATUS Tpm2CreatePrimary_Epilogue(TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTIO
     return EFI_SUCCESS;
 }
 
+UINT32 ObjectAttributesToUint32(TPMA_OBJECT *ObjectAttributes) {
+    UINT32 res = 0;
+    res |= ObjectAttributes->reserved19_31; 
+    res <<= 1; res |= ObjectAttributes->sign; 
+    res <<= 1; res |= ObjectAttributes->decrypt; 
+    res <<= 1; res |= ObjectAttributes->restricted; 
+    res <<= 4; res |= ObjectAttributes->reserved12_15;
+    res <<= 1; res |= ObjectAttributes->encryptedDuplication;
+    res <<= 1; res |= ObjectAttributes->noDA;
+    res <<= 2; res |= ObjectAttributes->reserved8_9;
+    res <<= 1; res |= ObjectAttributes->adminWithPolicy;
+    res <<= 1; res |= ObjectAttributes->userWithAuth;
+    res <<= 1; res |= ObjectAttributes->sensitiveDataOrigin;
+    res <<= 1; res |= ObjectAttributes->fixedParent;
+    res <<= 1; res |= ObjectAttributes->reserved4;
+    res <<= 1; res |= ObjectAttributes->stClear;
+    res <<= 1; res |= ObjectAttributes->fixedTPM;
+    res <<= 1; res |= ObjectAttributes->reserved1;
+    return res;
+}
+
 EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND *AuthSession, // in
     TPM2B_SENSITIVE_CREATE *InSensitive, // in
     TPMI_ALG_HASH NameAlg, TPMA_OBJECT *ObjectAttributes, TPM2B_DIGEST *AuthPolicy, // in
@@ -464,11 +485,11 @@ EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMA
 
     UINT8 *PublicSize = Buffer; // write it later
     Buffer += sizeof(UINT16);
-    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(TPM_ALG_AES));
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(TPM_ALG_SYMCIPHER));
     Buffer += sizeof(UINT16);
     WriteUnaligned16((UINT16*) Buffer, SwapBytes16(NameAlg));
     Buffer += sizeof(UINT16);
-    WriteUnaligned32((UINT32*) Buffer, SwapBytes32(*(UINT32*) ObjectAttributes));
+    WriteUnaligned32((UINT32*) Buffer, SwapBytes32(ObjectAttributesToUint32(ObjectAttributes)));
     Buffer += sizeof(UINT32);
     WriteUnaligned16((UINT16*) Buffer, SwapBytes16(AuthPolicy->size));
     Buffer += sizeof(UINT16);
@@ -483,6 +504,9 @@ EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMA
     WriteUnaligned16((UINT16*) Buffer, 0); // unique.sym
     Buffer += sizeof(UINT16);
     WriteUnaligned16((UINT16*) PublicSize, SwapBytes16( (UINT16)( Buffer - PublicSize - 2 ) )); // write it here
+    printf("PublicSize: %d\n", (UINT16)( Buffer - PublicSize - 2 ));
+    printf("sizeof(TPMU_PUBLIC_PARMS): %d\n", sizeof(TPMU_PUBLIC_PARMS));
+    printf("sizeof(TPMS_SYMCIPHER_PARMS): %d\n", sizeof(TPMS_SYMCIPHER_PARMS));
 
     Status = Tpm2CreatePrimary_Epilogue(OutsideInfo, PcrSelection, // in
         ObjectHandle, OutPublic, CreationData, // out

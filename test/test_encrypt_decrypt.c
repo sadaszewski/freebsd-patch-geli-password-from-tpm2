@@ -20,6 +20,16 @@ EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMA
 
 UINT32 ObjectAttributesToUint32(TPMA_OBJECT *ObjectAttributes);
 
+EFI_STATUS Tpm2EncryptDecrypt(
+    TPMI_DH_OBJECT        KeyHandle,
+    TPMS_AUTH_COMMAND     *AuthSession,
+    TPMI_YES_NO           Decrypt,
+    TPMI_ALG_SYM_MODE     Mode,
+    TPM2B_IV              *IvIn,
+    TPM2B_MAX_BUFFER      *InData,
+    TPM2B_MAX_BUFFER      *OutData,
+    TPM2B_IV              *OutIv);
+
 EFI_STATUS Tpm2StartAuthSession (
 	TPMI_DH_OBJECT			TpmKey,
 	TPMI_DH_ENTITY			Bind,
@@ -182,9 +192,9 @@ void test_04_create_primary_aes() {
     TPMA_OBJECT ObjectAttributes = {
        .fixedTPM = 1,
        .fixedParent = 1,
-       .decrypt = 1,
+       .sign = 1,
        .sensitiveDataOrigin = 1,
-       .restricted = 1
+       .userWithAuth = 1
     };
     printf("ObjectAttributes = 0x%08X\n", ObjectAttributesToUint32(&ObjectAttributes));
     TPM2B_DIGEST AuthPolicy = {
@@ -221,12 +231,77 @@ void test_04_create_primary_aes() {
     printf("Success!!!\n");
 }
 
+void test_05_encrypt() {
+    printf("======= test_05_encrypt() =======\n");
+
+    EFI_STATUS Status;
+
+	TPM2B_DIGEST NonceCaller = { 16 };
+	TPM2B_ENCRYPTED_SECRET Salt = { 0 };
+	TPMT_SYM_DEF Symmetric = { TPM_ALG_NULL };
+	TPM2B_NONCE NonceTPM;
+    TPMI_SH_AUTH_SESSION SessionHandle;
+	Status = Tpm2StartAuthSession (
+	    TPM_RH_NULL,	// TpmKey
+	    TPM_RH_NULL,	// Bind
+	    &NonceCaller,
+	    &Salt,
+	    TPM_SE_HMAC,	// SessionType
+	    &Symmetric,
+	    TPM_ALG_SHA256,	//AuthHash
+	    &SessionHandle,
+	    &NonceTPM
+	);
+	if (EFI_ERROR(Status)) {
+		printf("Tpm2StartAuthSession() failed - 0x%lx.\n", Status);
+		return;
+	}
+
+    TPMI_DH_OBJECT KeyHandle = 0x80000000;
+    TPMS_AUTH_COMMAND AuthSession = {
+        .sessionHandle = SessionHandle,
+        .nonce = { 0 },
+        .sessionAttributes = 0,
+        .hmac = { 0 }
+    };
+    TPMI_YES_NO Decrypt = 0;
+    TPMI_ALG_SYM_MODE Mode = TPM_ALG_CFB;
+    TPM2B_IV InIv = { .size = 16 };
+    TPM2B_MAX_BUFFER InData = { .size = 6, .buffer = "foobar" };
+    TPM2B_MAX_BUFFER OutData;
+    TPM2B_IV OutIv;
+ 
+    Status = Tpm2EncryptDecrypt(
+        KeyHandle,
+        &AuthSession,
+        Decrypt,
+        Mode,
+        &InIv,
+        &InData,
+        &OutData,
+        &OutIv);
+    if (EFI_ERROR(Status)) {
+        printf("Tpm2EncryptDecrypt() error - 0x%lX\n", Status);
+        return;
+    }
+
+    printf("OutData.size: %d\n", OutData.size);
+    printf("Encrypted data:\n");
+    for (UINT16 i = 0; i < OutData.size; i++) {
+        printf("%02X ", OutData.buffer[i]);
+    }
+    printf("\n");
+
+    printf("Success!!!\n");
+}
+
 int main() {
     printf("Hello world!\n");
     mock_tpm2_init();
     //test_01_save_context();
     //test_02_load_context();
     //test_03_decrypt();
-    test_04_create_primary_aes();
+    //test_04_create_primary_aes();
+    test_05_encrypt();
     BS->Exit(IH, EFI_INVALID_PARAMETER, 0, NULL);
 }

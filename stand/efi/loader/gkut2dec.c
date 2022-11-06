@@ -32,8 +32,10 @@ typedef struct {
 
 typedef struct {
     TPM2_RESPONSE_HEADER  Header;
+    UINT32                AuthSessionSize;
     TPM2B_MAX_BUFFER      OutData;
     TPM2B_IV              IvOut;
+    TPMS_AUTH_RESPONSE    AuthSession;
 } TPM2_ENCRYPT_DECRYPT_RESPONSE;
 
 typedef struct {
@@ -161,17 +163,31 @@ EFI_STATUS Tpm2EncryptDecrypt(
         goto Done;
 	}
 
-    OutData->size = SwapBytes16(RecvBuffer.OutData.size);
+    /* printf("RecvBufferSize: %d\n", RecvBufferSize);
+    for (int i = 0; i < RecvBufferSize; i++) {
+        printf("%02X ", ((UINT8*) &RecvBuffer)[i]);
+    }
+    printf("\n"); */
+
+    Buffer = (UINT8*) &RecvBuffer.AuthSessionSize;
+    UINT32 sz = SwapBytes32(ReadUnaligned32((UINT32*) Buffer));
+    Buffer += sizeof(UINT32);
+    // printf("AuthSessionSize: %d\n", sz);
+
+    OutData->size = SwapBytes16(ReadUnaligned16((UINT16*) Buffer));
+    Buffer += sizeof(UINT16);
     if (OutData->size > MAX_DIGEST_BUFFER) {
 		printf("Tpm2EncryptDecrypt - OutData->size error %x\n", OutData->size);
 		Status = EFI_DEVICE_ERROR;
 		goto Done;
     }
-    memcpy(&OutData->buffer[0], &RecvBuffer.OutData.buffer[0], OutData->size);
+    memcpy(&OutData->buffer[0], Buffer, OutData->size);
+    // printf("OutData->size: %d\n", OutData->size);
+    Buffer += OutData->size;
 
-    Buffer = ((UINT8*) &RecvBuffer.OutData) + sizeof(UINT16) + OutData->size;
     OutIv->size = SwapBytes16(ReadUnaligned16((UINT16*) Buffer));
     Buffer += sizeof(UINT16);
+    // printf("OutIv->size: %d\n", OutIv->size);
     if (OutIv->size > MAX_SYM_BLOCK_SIZE) {
 		printf("Tpm2EncryptDecrypt - OutIv->size error %x\n", OutIv->size);
 		Status = EFI_DEVICE_ERROR;

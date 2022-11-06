@@ -495,12 +495,12 @@ EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMA
     Buffer += sizeof(UINT16);
     memcpy(Buffer, &AuthPolicy->buffer[0], AuthPolicy->size);
     Buffer += AuthPolicy->size;
-    TPMU_PUBLIC_PARMS PublicParms;
-    PublicParms.symDetail.algorithm = SwapBytes16(TPM_ALG_AES);
-    PublicParms.symDetail.keyBits.aes = SwapBytes16(KeyBits);
-    PublicParms.symDetail.mode.aes = SwapBytes16(SymMode);
-    memcpy(Buffer, &PublicParms, sizeof(TPMU_PUBLIC_PARMS));
-    Buffer += sizeof(TPMU_PUBLIC_PARMS);
+    TPMT_SYM_DEF_OBJECT SymDetail;
+    SymDetail.algorithm = SwapBytes16(TPM_ALG_AES);
+    SymDetail.keyBits.aes = SwapBytes16(KeyBits);
+    SymDetail.mode.aes = SwapBytes16(SymMode);
+    memcpy(Buffer, &SymDetail, sizeof(SymDetail));
+    Buffer += sizeof(SymDetail);
     WriteUnaligned16((UINT16*) Buffer, 0); // unique.sym
     Buffer += sizeof(UINT16);
     WriteUnaligned16((UINT16*) PublicSize, SwapBytes16( (UINT16)( Buffer - PublicSize - 2 ) )); // write it here

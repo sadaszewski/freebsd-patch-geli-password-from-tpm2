@@ -114,6 +114,14 @@ EFI_STATUS gkut2_efi_read_file(CHAR16 *FileName, UINT64 MaxFileSize, UINT8 **Buf
         (void)free(Buffer_freeme);
         return Status;
     }
+
+    Status = FileHandle->Close(FileHandle);
+    if (EFI_ERROR(Status)) {
+        printf("gkut2_efi_read_file() - Close() - %lu\n", Status);
+        (void)free(Buffer_freeme);
+        return Status;
+    }
+
     *Buffer_freeme_out = Buffer_freeme;
     return EFI_SUCCESS;
 }

@@ -6,6 +6,7 @@
 
 typedef unsigned char BOOLEAN;
 typedef char INT8;
+typedef short INT16;
 typedef unsigned short CHAR16;
 typedef unsigned char UINT8;
 typedef unsigned short UINT16;
@@ -28,6 +29,7 @@ typedef struct {
 typedef struct {
     void (*Exit)(void*, int, int, void*);
     EFI_STATUS (*LocateProtocol)(EFI_GUID*, void*, void**);
+    EFI_STATUS (*HandleProtocol)(void*, EFI_GUID*, void**);
 } EFI_BOOT_SERVICES;
 
 

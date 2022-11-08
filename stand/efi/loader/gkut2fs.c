@@ -54,6 +54,25 @@ EFI_STATUS gkut2_efi_open_volume() {
     return EFI_SUCCESS;
 }
 
+
+EFI_STATUS gkut2_efi_close_volume() {
+    EFI_STATUS Status;
+
+    if (mVolume == NULL) {
+        printf("gkut2_efi_close_volume() - already closed\n");
+        return EFI_SUCCESS;
+    }
+   
+    Status = mVolume->Close(mVolume);
+    if (EFI_ERROR(Status)) {
+        printf("gkut2_efi_close_volume() - %lu\n", Status);
+        return Status;
+    }
+    mVolume = NULL;
+    return EFI_SUCCESS;
+}
+
+
 EFI_STATUS gkut2_efi_file_size(EFI_FILE_HANDLE FileHandle, UINT64 *FileSize) {
     UINTN BufferSize = sizeof(EFI_FILE_INFO);
     EFI_STATUS Status;
@@ -76,7 +95,7 @@ EFI_STATUS gkut2_efi_file_size(EFI_FILE_HANDLE FileHandle, UINT64 *FileSize) {
 }
 
 
-EFI_STATUS gkut2_efi_read_file(CHAR16 *FileName, UINT64 MaxFileSize, UINT8 **Buffer_freeme_out) {
+EFI_STATUS gkut2_efi_read_file(CHAR16 *FileName, UINT64 *MaxFileSize, UINT8 **Buffer_freeme_out) {
     EFI_STATUS Status;
     EFI_FILE_HANDLE FileHandle;
     UINT64 FileSize;
@@ -102,13 +121,14 @@ EFI_STATUS gkut2_efi_read_file(CHAR16 *FileName, UINT64 MaxFileSize, UINT8 **Buf
         return Status;
     }
 
-    if (FileSize > MaxFileSize) {
+    if (FileSize > *MaxFileSize) {
         printf("gkut2_efi_read_file() - file too large\n");
         return EFI_BAD_BUFFER_SIZE;
     }
 
     Buffer_freeme = (UINT8*) malloc(FileSize);
-    Status = FileHandle->Read(FileHandle, &FileSize, Buffer_freeme);
+    *MaxFileSize = FileSize;
+    Status = FileHandle->Read(FileHandle, MaxFileSize, Buffer_freeme);
     if (EFI_ERROR(Status)) {
         printf("gkut2_efi_read_file() - Read() - %lu\n", Status);
         (void)free(Buffer_freeme);

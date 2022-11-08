@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 typedef unsigned char BOOLEAN;
 typedef char INT8;
@@ -45,6 +46,7 @@ extern void *IH;
 #define EFI_DEVICE_ERROR 2
 #define EFI_NOT_FOUND 3
 #define EFI_UNSUPPORTED 4
+#define EFI_BAD_BUFFER_SIZE 5
 
 //#define EFI_TCG2_SUBMIT_COMMAND 3
 //#define EFI_TCG2_GET_ACTIVE_PCR_BANKS 4

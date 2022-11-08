@@ -24,21 +24,15 @@ EFI_TCG2_PROTOCOL DummyTcgProtocol = {
     .SubmitCommand = DummyTpm2SubmitCommand
 };
 
-void DummyExit(void*, int, int, void*) {
-    printf("BS->Exit() called.\n");
-}
-
 EFI_STATUS DummyLocateProtocol(EFI_GUID*, void*, void **Result) {
     *Result = &DummyTcgProtocol;
     return EFI_SUCCESS;
 }
 
-EFI_BOOT_SERVICES BS_ = {
-    DummyExit,
-    DummyLocateProtocol,
-    DummyHandleProtocol
-};
+extern EFI_BOOT_SERVICES *BS;
 
-EFI_BOOT_SERVICES *BS = &BS_;
+void mock_tpm2_api_init() {
+    BS->LocateProtocol = DummyLocateProtocol;
+}
 
 void *IH;

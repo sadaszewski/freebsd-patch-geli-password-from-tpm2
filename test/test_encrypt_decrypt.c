@@ -5,6 +5,8 @@
 
 void mock_tpm2_init();
 
+void mock_tpm2_api_init();
+
 EFI_STATUS Tpm2ContextLoad(UINT64 Sequence, TPMI_DH_CONTEXT SavedHandle, TPMI_RH_HIERARCHY Hierarchy,
     TPM2B_CONTEXT_DATA *ContextBlob, TPMI_DH_CONTEXT *LoadedHandle);
 
@@ -311,6 +313,7 @@ void test_05_encrypt() {
 int main() {
     printf("Hello world!\n");
     mock_tpm2_init();
+    mock_tpm2_api_init();
     //test_01_save_context();
     //test_02_load_context();
     //test_03_decrypt();

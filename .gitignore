@@ -56,6 +56,7 @@ dkms.conf
 
 /test/test_context_load
 /test/test_encrypt_decrypt
+/test/test_simplefs
 
 *.core
 

@@ -4,7 +4,11 @@
 
 #include <stdlib.h>
 
-EFI_LOADED_IMAGE *boot_img;
+#define MOCKFS_PREFIX "/tmp/mock-simplefs/"
+
+EFI_LOADED_IMAGE boot_img_ = {};
+
+EFI_LOADED_IMAGE *boot_img = &boot_img_;
 
 static EFI_STATUS DummyClose (
     IN struct _EFI_FILE_HANDLE  *File);
@@ -41,14 +45,19 @@ static EFI_STATUS DummyOpen (
         FileNameMB[i] = FileName[i];
     }
     FileNameMB[FileNameLen] = 0;
+    char *FileNameFinal = (char*) malloc(FileNameLen + strlen(MOCKFS_PREFIX) + 1);
+    FileNameFinal[0] = 0;
+    strcat(FileNameFinal, MOCKFS_PREFIX);
+    strcat(FileNameFinal, FileNameMB);
+    (void)free(FileNameMB);
 
-    FILE *FileObj = fopen(FileNameMB, "rb");
+    FILE *FileObj = fopen(FileNameFinal, "rb");
     if (FileObj == NULL) {
-        printf("DummyOpen() - Failed to open %s\n", FileNameMB);
-        (void)free(FileNameMB);
+        printf("DummyOpen() - Failed to open %s\n", FileNameFinal);
+        (void)free(FileNameFinal);
         return EFI_NOT_FOUND;
     }
-    (void)free(FileNameMB);
+    (void)free(FileNameFinal);
 
     *NewHandle = (EFI_FILE_HANDLE) malloc(sizeof(EFI_FILE));
     (*NewHandle)->Open = DummyOpen;
@@ -140,6 +149,16 @@ static EFI_FILE_IO_INTERFACE DummyFileIOInterface = {
 };
 
 
-EFI_STATUS DummyHandleProtocol(void*, EFI_GUID*, void**) {
+EFI_STATUS DummyHandleProtocol(void*, EFI_GUID*, void **Out) {
+    printf("DummyHandleProtocol()\n");
+    *Out = &DummyFileIOInterface;
     return EFI_SUCCESS;
+}
+
+extern EFI_BOOT_SERVICES *BS;
+
+void mock_simplefs_init() {
+    printf("mock_simplefs_init()\n");
+    BS->HandleProtocol = DummyHandleProtocol;
+    printf("BS->HandleProtocol: 0x%08X\n", BS->HandleProtocol);
 }

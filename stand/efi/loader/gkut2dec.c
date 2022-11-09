@@ -84,6 +84,8 @@ typedef struct {
 typedef struct {
     TPM2_COMMAND_HEADER     Header;
     TPMI_DH_OBJECT          ParentHandle;
+    UINT32                  AuthSessionSize;
+    TPMS_AUTH_COMMAND       AuthSession;
     TPM2B_PRIVATE           InPrivate;
     TPM2B_PUBLIC            InPublic;
 } TPM2_LOAD_COMMAND;
@@ -629,4 +631,65 @@ EFI_STATUS Tpm2CreatePrimary_PremarshalledPublic(TPMI_RH_HIERARCHY PrimaryHandle
         CreationHash, CreationTicket, Name, (UINT8*) &SendBuffer, Buffer,
         DecodePublicParamsAndId_Nop);
     return Status;
+}
+
+EFI_STATUS Tpm2Load(TPMI_DH_OBJECT ParentHandle, TPMS_AUTH_COMMAND *AuthSession, // in
+    UINT8 *InPrivateMarshalled, UINT16 InPrivateMarshalledSize, // in
+    UINT8 *InPublicMarshalled, UINT16 InPublicMarshalledSize, // in
+    TPM_HANDLE *ObjectHandle, TPM2B_NAME *Name) { // out
+
+    TPM2_LOAD_COMMAND SendBuffer;
+    TPM2_LOAD_RESPONSE RecvBuffer;
+    UINT8 *Buffer;
+    EFI_STATUS Status;
+    TPM_RC ResponseCode;
+
+    SendBuffer.Header.tag = SwapBytes16(TPM_ST_SESSIONS);
+    SendBuffer.Header.commandCode = SwapBytes32(TPM_CC_Load);
+
+    SendBuffer.ParentHandle = SwapBytes32(ParentHandle);
+    
+    Buffer = (UINT8*) &SendBuffer.AuthSessionSize;
+    UINT8 *AuthSessionSize = Buffer;
+    Buffer += sizeof(UINT32);
+    UINT32 SessionInfoSize = CopyAuthSessionCommand(AuthSession, Buffer);
+    Buffer += SessionInfoSize;
+    WriteUnaligned32((UINT32*) AuthSessionSize, SwapBytes32(SessionInfoSize));
+
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InPrivateMarshalledSize));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, InPrivateMarshalled, InPrivateMarshalledSize);
+    Buffer += InPrivateMarshalledSize;
+
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InPublicMarshalledSize));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, InPublicMarshalled, InPublicMarshalledSize);
+    Buffer += InPublicMarshalledSize;
+
+    UINT32 SendBufferSize = (UINT32)(Buffer - (UINT8*) &SendBuffer);
+    SendBuffer.Header.paramSize = SwapBytes32(SendBufferSize);
+
+    UINT32 RecvBufferSize = sizeof(RecvBuffer);
+	Status = Tpm2SubmitCommand (SendBufferSize, (UINT8*)&SendBuffer, &RecvBufferSize, (UINT8*)&RecvBuffer);
+	if (EFI_ERROR (Status)) {
+        printf("Tpm2Load - Tpm2SubmitCommand - %lu\n", Status);
+		return Status;
+	}
+
+	if (RecvBufferSize < sizeof (TPM2_RESPONSE_HEADER)) {
+		printf("Tpm2Load - RecvBufferSize Error - %x\n", RecvBufferSize);
+		return EFI_DEVICE_ERROR;
+	}
+	ResponseCode = SwapBytes32(RecvBuffer.Header.responseCode);
+	if (ResponseCode != TPM_RC_SUCCESS) {
+		printf("Tpm2Load - responseCode - %x\n", ResponseCode);
+        return EFI_DEVICE_ERROR;
+	}
+
+    *ObjectHandle = SwapBytes32(RecvBuffer.ObjectHandle);
+
+    Name->size = SwapBytes16(RecvBuffer.Name.size);
+    memcpy(&Name->name[0], &RecvBuffer.Name.name[0], Name->size);
+
+    return EFI_SUCCESS;
 }

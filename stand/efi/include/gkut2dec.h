@@ -59,4 +59,9 @@ EFI_STATUS Tpm2CreatePrimary_PremarshalledPublic(TPMI_RH_HIERARCHY PrimaryHandle
     TPM_HANDLE *ObjectHandle, TPM2B_CREATION_DATA *CreationData, // out
     TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name); // out
 
+EFI_STATUS Tpm2Load(TPMI_DH_OBJECT ParentHandle, TPMS_AUTH_COMMAND *AuthSession, // in
+    UINT8 *InPrivateMarshalled, UINT16 InPrivateMarshalledSize, // in
+    UINT8 *InPublicMarshalled, UINT16 InPublicMarshalledSize, // in
+    TPM_HANDLE *ObjectHandle, TPM2B_NAME *Name); // out
+
 #endif // _GKUT2_DEC_H_

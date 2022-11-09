@@ -57,11 +57,13 @@ test_ext_public: test_ext_public.c \
 test_early: test_early.c \
     ../stand/efi/loader/gkut2early.c \
     ../stand/efi/loader/gkut2fs.c \
+    ../stand/efi/loader/gkut2parse.c \
     mock_bs.c \
     mock_simplefs.c
 	gcc $(CFLAGS) test_early.c \
         ../stand/efi/loader/gkut2early.c \
         ../stand/efi/loader/gkut2fs.c \
+        ../stand/efi/loader/gkut2parse.c \
         mock_bs.c \
         mock_simplefs.c \
         -o test_early

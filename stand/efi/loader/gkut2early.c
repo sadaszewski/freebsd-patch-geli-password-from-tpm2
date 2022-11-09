@@ -1,8 +1,9 @@
 #include "gkut2fs.h"
 #include "gkut2dec.h"
 #include "gkut2early.h"
+#include "gkut2parse.h"
 
-void gkut2_free_early_result(gkut2_early_result *res) {
+void gkut2_free_read_necessary_result(gkut2_read_necessary_result *res) {
     (void)free(res->iv);
     (void)free(res->sym_pub);
     (void)free(res->sym_priv);
@@ -10,7 +11,7 @@ void gkut2_free_early_result(gkut2_early_result *res) {
     (void)free(res->policy_pcr);
 }
 
-EFI_STATUS gkut2_early(gkut2_early_result *res) {
+EFI_STATUS gkut2_read_necessary(gkut2_read_necessary_result *res) {
     EFI_STATUS Status;
     UINT8 *iv_freeme = NULL;
     UINT64 iv_size = 1024;

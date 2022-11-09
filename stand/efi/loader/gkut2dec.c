@@ -437,6 +437,10 @@ EFI_STATUS DecodePublicParamsAndId_Aes(UINT8 **BufferInOut, TPM2B_PUBLIC *OutPub
     return EFI_SUCCESS;
 }
 
+EFI_STATUS DecodePublicParamsAndId_Nop(UINT8 **BufferInOut, TPM2B_PUBLIC *OutPublic) {
+    return EFI_SUCCESS;
+}
+
 EFI_STATUS Tpm2CreatePrimary_Epilogue(TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION *PcrSelection, // in
     TPM_HANDLE *ObjectHandle, TPM2B_PUBLIC *OutPublic, TPM2B_CREATION_DATA *CreationData, // out
     TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name, // out
@@ -594,3 +598,35 @@ EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMA
     return Status;
 }
 
+EFI_STATUS Tpm2CreatePrimary_PremarshalledPublic(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND *AuthSession, // in
+    TPM2B_SENSITIVE_CREATE *InSensitive, // in
+    UINT8 *InPublicPremarshalled, UINT16 InPublicPremarshalledSize, // in 
+    TPM2B_DATA *OutsideInfo, TPML_PCR_SELECTION *PcrSelection, // in
+    TPM_HANDLE *ObjectHandle, TPM2B_CREATION_DATA *CreationData, // out
+    TPM2B_DIGEST *CreationHash, TPMT_TK_CREATION *CreationTicket, TPM2B_NAME *Name) { // out
+
+    TPM2_CREATE_PRIMARY_COMMAND SendBuffer;
+    UINT32 SendBufferSize;
+    EFI_STATUS Status;
+    UINT8 *Buffer;
+
+    Buffer = (UINT8*) &SendBuffer;
+    Status = Tpm2CreatePrimary_Preamble(PrimaryHandle, AuthSession,
+        InSensitive, (UINT8**) &Buffer);
+    if (EFI_ERROR(Status)) {
+        return Status;
+    }
+
+    WriteUnaligned16((UINT16*) Buffer, SwapBytes16(InPublicPremarshalledSize));
+    Buffer += sizeof(UINT16);
+    memcpy(Buffer, InPublicPremarshalled, InPublicPremarshalledSize);
+    Buffer += InPublicPremarshalledSize;
+
+    TPM2B_PUBLIC IgnoreOutPublic;
+
+    Status = Tpm2CreatePrimary_Epilogue(OutsideInfo, PcrSelection, // in
+        ObjectHandle, &IgnoreOutPublic, CreationData, // out
+        CreationHash, CreationTicket, Name, (UINT8*) &SendBuffer, Buffer,
+        DecodePublicParamsAndId_Nop);
+    return Status;
+}

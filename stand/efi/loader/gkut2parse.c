@@ -17,7 +17,7 @@ TPMI_ALG_HASH gkut2_resolve_hash_alg_name(const char *name) {
 		return (TPMI_ALG_HASH) strtol(name, NULL, 16);
 }
 
-EFI_STATUS tpm2_parse_efivar_policy_spec(char *policy_pcr, TPMI_ALG_HASH *algHash, BYTE *pcrSelect, BYTE *sizeofSelect) {
+EFI_STATUS tpm2_parse_efivar_policy_spec(const char *policy_pcr, TPMI_ALG_HASH *algHash, BYTE *pcrSelect, BYTE *sizeofSelect) {
 	char *p;
 	char *pi;
 	char ch;

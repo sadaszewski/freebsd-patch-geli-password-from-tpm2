@@ -32,31 +32,31 @@ EFI_STATUS gkut2_read_necessary(gkut2_read_necessary_result *res) {
 
     Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/iv", &iv_size, &iv_freeme);
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_efi_read_file - iv - %lu\n", Status);
+        printf("gkut2_early - gkut2_efi_read_file - iv - %lu\n", Status);
         goto Error;
     }
 
     Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/sym.pub", &sym_pub_size, &sym_pub_freeme);
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_efi_read_file - sym.pub - %lu\n", Status);
+        printf("gkut2_early - gkut2_efi_read_file - sym.pub - %lu\n", Status);
         goto Error;
     }
     
     Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/sym.priv", &sym_priv_size, &sym_priv_freeme);
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_efi_read_file - sym.priv - %lu\n", Status);
+        printf("gkut2_early - gkut2_efi_read_file - sym.priv - %lu\n", Status);
         goto Error;
     }
 
     Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/passphrase.enc", &passphrase_enc_size, &passphrase_enc_freeme);
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_efi_read_file - passphrase.enc - %lu\n", Status);
+        printf("gkut2_early - gkut2_efi_read_file - passphrase.enc - %lu\n", Status);
         goto Error;
     }
 
     Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/policy_pcr", &policy_pcr_size, &policy_pcr_freeme);
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_efi_read_file - policy_pcr - %lu\n", Status);
+        printf("gkut2_early - gkut2_efi_read_file - policy_pcr - %lu\n", Status);
         goto Error;
     }
 

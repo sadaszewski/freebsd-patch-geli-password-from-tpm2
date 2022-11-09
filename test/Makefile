@@ -1,4 +1,5 @@
-ALL=test_encrypt_decrypt test_context_load test_simplefs test_ext_public
+ALL=test_encrypt_decrypt test_context_load test_simplefs \
+    test_ext_public test_early
 
 CFLAGS+=-I../stand/efi/include -I../stand/efi/loader -I.
 
@@ -52,6 +53,18 @@ test_ext_public: test_ext_public.c \
         mock_bs.c \
         -o test_ext_public \
         -ltss2-tcti-swtpm
+
+test_early: test_early.c \
+    ../stand/efi/loader/gkut2early.c \
+    ../stand/efi/loader/gkut2fs.c \
+    mock_bs.c \
+    mock_simplefs.c
+	gcc $(CFLAGS) test_early.c \
+        ../stand/efi/loader/gkut2early.c \
+        ../stand/efi/loader/gkut2fs.c \
+        mock_bs.c \
+        mock_simplefs.c \
+        -o test_early
 
 test_context_load: test_context_load.c
 	gcc $(CFLAGS) test_context_load.c -o test_context_load

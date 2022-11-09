@@ -58,6 +58,7 @@ dkms.conf
 /test/test_encrypt_decrypt
 /test/test_simplefs
 /test/test_ext_public
+/test/test_early
 
 *.core
 

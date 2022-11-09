@@ -43,7 +43,7 @@ def main():
     newpass = args.newpass.encode('utf-8') or random.getrandbits(args.nbits).to_bytes(args.nbits // 8, 'little') 
 
     print('Generating salt, TPM2 owner password, primary key auth value...')
-    newsalt, newownerpass, primaryauthvalue = [ random.getrandbits(args.nbits).to_bytes(args.nbits // 8, 'little') \
+    newsalt, newownerpass, symauthvalue = [ random.getrandbits(args.nbits).to_bytes(args.nbits // 8, 'little') \
         for _ in range(3) ]
 
     print('Generating IV...')
@@ -59,7 +59,7 @@ def main():
         os.chmod(d, 0o700)
 
         for fnam, data in { '.newpass': newpass, '.newownerpass': newownerpass,
-            '.primaryauthvalue': primaryauthvalue }.items():
+            '.symauthvalue': symauthvalue }.items():
             with open(os.path.join(d, fnam), 'wb') as f:
                 f.write(data)
 
@@ -67,8 +67,9 @@ def main():
         subprocess.check_output([ 'tpm2_clear' ])
 
         print('Taking ownership of TPM2...')
-        subprocess.check_output([ 'tpm2_changeauth',
-            '-c', 'owner', 'file:' + os.path.join(d, '.newownerpass') ])
+        for hier in [ 'owner', 'endorsement', 'lockout' ]:
+            subprocess.check_output([ 'tpm2_changeauth',
+                '-c', hier, 'file:' + os.path.join(d, '.newownerpass') ])
 
         print('Generating passphrase marker...')
         sha256 = hashlib.sha256()
@@ -103,17 +104,30 @@ def main():
 
         print('Creating primary key...')
         subprocess.check_output([ 'tpm2_createprimary',
-            '-G', 'aes128cfb',
-            '-a', 'fixedparent|fixedtpm|sign|decrypt|sensitivedataorigin|userwithauth',
-            '-L', os.path.join(args.efi_target_dir, 'policydigest'),
             '-c', os.path.join(d, '.primarycontext'),
-            '-P', 'file:' + os.path.join(d, '.newownerpass'),
-            '-p', 'file:' + os.path.join(d, '.primaryauthvalue') ])
+            '-a', 'fixedtpm|fixedparent|sensitivedataorigin|userwithauth|restricted|decrypt',
+            '-P', 'file:' + os.path.join(d, '.newownerpass') ])
+
+        print('Persisting primary key...')
+        subprocess.check_output([ 'tpm2_evictcontrol', 
+            '-c', '0x80000000',
+            '-P', 'file:' + os.path.join(d, '.newownerpass') ])
+
+        print('Creating symmetric key...')
+        subprocess.check_output([ 'tpm2_create',
+            '-C', '0x81000000',
+            '-G', 'aes128cfb',
+            '-a', 'fixedtpm|fixedparent|sensitivedataorigin|userwithauth|decrypt|sign',
+            '-u', os.path.join(args.efi_target_dir, 'sym.pub'),
+            '-r', os.path.join(args.efi_target_dir, 'sym.priv'),
+            '-p', 'file:' + os.path.join(d, '.symauthvalue'),
+            '-L', os.path.join(args.efi_target_dir, 'policydigest'),
+            '-c', os.path.join(d, '.symcontext') ]) 
 
         print('Encrypting passphrase...')
         subprocess.check_output([ 'tpm2_encryptdecrypt',
-            '-c', os.path.join(d, '.primarycontext'),
-            '-p', 'file:' + os.path.join(d, '.primaryauthvalue'),
+            '-c', os.path.join(d, '.symcontext'),
+            '-p', 'file:' + os.path.join(d, '.symauthvalue'),
             '-t', os.path.join(args.efi_target_dir, 'iv'),
             '-o', os.path.join(args.efi_target_dir, 'passphrase.enc'),
             os.path.join(d, '.newpass') ]) 

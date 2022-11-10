@@ -1,5 +1,5 @@
 ALL=test_encrypt_decrypt test_context_load test_simplefs \
-    test_ext_public test_early
+    test_ext_public test_early test_flow
 
 CFLAGS+=-I../stand/efi/include -I../stand/efi/loader -I. -ggdb
 
@@ -79,6 +79,38 @@ test_early: test_early.c \
         -o test_early \
         -ltss2-tcti-swtpm
 
+test_flow: test_flow.c \
+    ../stand/efi/loader/gkut2early.c \
+    ../stand/efi/loader/gkut2fs.c \
+    ../stand/efi/loader/gkut2parse.c \
+    ../stand/efi/loader/gkut2auth.c \
+    ../stand/efi/loader/gkut2tcg.c \
+    ../stand/efi/loader/gkut2dec.c \
+    ../stand/efi/loader/gkut2late.c \
+    ../stand/efi/loader/gkut2flow.c \
+    ../stand/efi/loader/gkut2pcr.c \
+    mock_bs.c \
+    mock_simplefs.c \
+    mock_tpm2_api.c \
+    mock_tpm2_impl.c \
+    mock_geli.c
+	gcc $(CFLAGS) test_flow.c \
+        ../stand/efi/loader/gkut2early.c \
+        ../stand/efi/loader/gkut2fs.c \
+        ../stand/efi/loader/gkut2parse.c \
+        ../stand/efi/loader/gkut2auth.c \
+        ../stand/efi/loader/gkut2tcg.c \
+        ../stand/efi/loader/gkut2dec.c \
+        ../stand/efi/loader/gkut2late.c \
+        ../stand/efi/loader/gkut2flow.c \
+        ../stand/efi/loader/gkut2pcr.c \
+        mock_bs.c \
+        mock_simplefs.c \
+        mock_tpm2_api.c \
+	mock_tpm2_impl.c \
+	mock_geli.c \
+        -o test_flow \
+        -ltss2-tcti-swtpm
+
 test_context_load: test_context_load.c
 	gcc $(CFLAGS) test_context_load.c -o test_context_load
-

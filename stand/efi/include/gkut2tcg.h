@@ -77,4 +77,6 @@ UINT32 CopyAuthSessionCommand (
 	UINT8					*AuthSessionOut
 );
 
+EFI_STATUS Tpm2LocateProtocol();
+
 #endif // _GKUT2_TCG_H_

@@ -62,5 +62,7 @@ extern void *IH;
 
 #define EFIAPI
 
+void efi_exit(EFI_STATUS);
+
 #endif
 

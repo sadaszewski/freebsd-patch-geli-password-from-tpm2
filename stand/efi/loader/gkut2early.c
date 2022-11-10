@@ -210,16 +210,19 @@ EFI_STATUS gkut2_decrypt_key(GKUT2_READ_NECESSARY_RESULT *input, UINT8 *key, UIN
         &input->iv, &InData, &OutData, &OutIv);
     if (EFI_ERROR(Status)) {
         printf("gkut2_decrypt_key - Tpm2EncryptDecrypt - %lu\n", Status);
+        explicit_bzero(&OutData.buffer[0], sizeof(OutData.buffer));
         return Status;
     }
 
     if (OutData.size > *key_size) {
         printf("gkut2_decrypt_key - decrypted key size too large - %d\n", OutData.size);
+        explicit_bzero(&OutData.buffer[0], sizeof(OutData.buffer));
         return EFI_BUFFER_TOO_SMALL;
     }
 
     memcpy(key, &OutData.buffer[0], OutData.size);
     *key_size = OutData.size;
+    explicit_bzero(&OutData.buffer[0], sizeof(OutData.buffer));
 
     return EFI_SUCCESS;
 }

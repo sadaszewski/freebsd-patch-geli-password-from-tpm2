@@ -115,3 +115,16 @@ UINT32 CopyAuthSessionCommand (
 	return (UINT32)((UINTN)Buffer - (UINTN)AuthSessionOut);
 }
 
+
+EFI_STATUS Tpm2LocateProtocol() {
+    EFI_STATUS				Status;
+
+	if (mTcg2Protocol == NULL) {
+		Status = BS->LocateProtocol (&mEfiTcg2ProtocolGuid, NULL, (VOID **) &mTcg2Protocol);
+		if (EFI_ERROR (Status)) {
+			return EFI_NOT_FOUND;
+		}
+	}
+
+	return EFI_SUCCESS;
+}

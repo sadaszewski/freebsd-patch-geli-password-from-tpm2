@@ -59,6 +59,7 @@ dkms.conf
 /test/test_simplefs
 /test/test_ext_public
 /test/test_early
+/test/test_flow
 
 *.core
 

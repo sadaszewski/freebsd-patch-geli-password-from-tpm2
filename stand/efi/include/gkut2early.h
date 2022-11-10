@@ -6,6 +6,7 @@
 #include <IndustryStandard/Tpm20.h>
 
 #define GKUT2_GELI_KEY_MAX_SIZE 64
+#define GKUT2_SALT_MAX_SIZE 64
 #define GKUT2_POLICY_PCR_TEXT_MAX_SIZE 255
 #define GKUT2_HANDLE_TEXT_MAX_SIZE 16
 
@@ -13,6 +14,11 @@ typedef struct {
     UINT8 size;
     UINT8 buffer[GKUT2_GELI_KEY_MAX_SIZE];
 } GKUT2B_GELI_KEY;
+
+typedef struct {
+    UINT8 size;
+    UINT8 buffer[GKUT2_SALT_MAX_SIZE];
+} GKUT2B_SALT;
 
 typedef struct {
     UINT8 size;

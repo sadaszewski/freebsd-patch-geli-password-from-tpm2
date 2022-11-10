@@ -25,6 +25,10 @@ static EFI_STATUS DummyGetInfo(
     OUT VOID                    *Buffer
     );
 
+static EFI_STATUS DummySetPosition(
+    IN struct _EFI_FILE_HANDLE  *File,
+    IN UINT64                    Position);
+
 static EFI_STATUS DummyOpen (
     IN struct _EFI_FILE_HANDLE  *File,
     OUT struct _EFI_FILE_HANDLE **NewHandle,
@@ -63,6 +67,7 @@ static EFI_STATUS DummyOpen (
     (*NewHandle)->Open = DummyOpen;
     (*NewHandle)->Close = DummyClose;
     (*NewHandle)->Read = DummyRead;
+    (*NewHandle)->SetPosition = DummySetPosition;
     (*NewHandle)->GetInfo = DummyGetInfo;
     (*NewHandle)->FileObj = FileObj;
 
@@ -94,6 +99,20 @@ static EFI_STATUS DummyRead (
     }
 
     *BufferSize = fread(Buffer, 1, *BufferSize, (FILE*)File->FileObj);
+
+    return EFI_SUCCESS;
+}
+
+static EFI_STATUS DummySetPosition (
+    IN struct _EFI_FILE_HANDLE  *File,
+    IN UINT64                    Position) {
+
+    if (File->FileObj == NULL) {
+        printf("DummySetPosition() - trying to set position on a volume is not supported.\n");
+        return EFI_UNSUPPORTED;
+    }
+
+    fseek((FILE*)File->FileObj, Position, SEEK_SET);
 
     return EFI_SUCCESS;
 }
@@ -131,6 +150,7 @@ static EFI_FILE DummyVolume = {
     .Open = DummyOpen,
     .Close = DummyClose,
     .Read = DummyRead,
+    .SetPosition = DummySetPosition,
     .GetInfo = DummyGetInfo,
     .FileObj = NULL
 };

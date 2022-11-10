@@ -12,19 +12,19 @@ void mock_tpm2_api_init();
 
 void test_01_gkut2_read_necessary() {
     printf("======= test_01_gkut2_read_necessary() ========\n");
-    gkut2_read_necessary_result res;
+    GKUT2_READ_NECESSARY_RESULT res;
     EFI_STATUS Status = gkut2_read_necessary(&res);
     assert(Status == EFI_SUCCESS);
     printf("Sizes: %llu, %llu, %llu, %llu, %llu\n",
-        res.iv_size, res.sym_pub_size, res.sym_priv_size, res.geli_key_enc_size, res.policy_pcr_size);
+        res.iv.size, res.sym_pub.size, res.sym_priv.size, res.geli_key_enc.size, res.policy_pcr.size);
     printf("Primary handle: 0x%08X\n", res.primary_handle);
-    gkut2_free_read_necessary_result(&res);
+    printf("policy_pcr: %s\n", &res.policy_pcr.buffer[0]);
     printf("Success!\n");
 }
 
 void test_02_gkut2_decrypt_key() {
     EFI_STATUS Status;
-    gkut2_read_necessary_result res;
+    GKUT2_READ_NECESSARY_RESULT res;
     UINT64 key_size;
     UINT8 key[64];
 

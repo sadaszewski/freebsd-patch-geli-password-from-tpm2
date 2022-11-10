@@ -4,106 +4,79 @@
 #include "gkut2parse.h"
 #include "gkut2auth.h"
 
-void gkut2_free_read_necessary_result(gkut2_read_necessary_result *res) {
-    (void)free(res->iv);
-    (void)free(res->sym_pub);
-    (void)free(res->sym_priv);
-    (void)free(res->geli_key_enc);
-    (void)free(res->policy_pcr);
-}
-
-EFI_STATUS gkut2_read_necessary(gkut2_read_necessary_result *res) {
+EFI_STATUS gkut2_read_necessary(GKUT2_READ_NECESSARY_RESULT *res) {
     EFI_STATUS Status;
-    UINT8 *iv_freeme = NULL;
-    UINT64 iv_size = 1024;
-    UINT8 *sym_pub_freeme = NULL;
-    UINT64 sym_pub_size = 1024;
-    UINT8 *sym_priv_freeme = NULL;
-    UINT64 sym_priv_size = 1024;
-    UINT8 *geli_key_enc_freeme = NULL;
-    UINT64 geli_key_enc_size = 1024;
-    UINT8 *policy_pcr_freeme = NULL;
-    UINT64 policy_pcr_size = 1024;
-    UINT8 *primary_handle_freeme = NULL;
-    UINT64 primary_handle_size = 1024;
-    UINT8 *primary_handle_zeroterm_freeme = NULL;
+    UINT64 Size;
+
+    if (res == NULL) {
+        return EFI_INVALID_PARAMETER;
+    }
 
     Status = gkut2_efi_open_volume();
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_open_volume - %lu\n", Status);
-        goto Error;
+        printf("gkut2_read_necessary - gkut2_efi_open_volume - %lu\n", Status);
+        return Status;
     }
 
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/iv", &iv_size, &iv_freeme);
+    Size = sizeof(res->iv.buffer);
+    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/iv", &Size, &res->iv.buffer[0], 0);
+    res->iv.size = Size;
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_read_file - iv - %lu\n", Status);
-        goto Error;
+        printf("gkut2_read_necessary - gkut2_efi_read_file - iv - %lu\n", Status);
+        return Status;
     }
 
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/sym.pub", &sym_pub_size, &sym_pub_freeme);
+    Size = sizeof(res->sym_pub.buffer);
+    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/sym.pub", &Size, (UINT8*) &res->sym_pub.buffer[0], 2);
+    res->sym_pub.size = Size;
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_read_file - sym.pub - %lu\n", Status);
-        goto Error;
+        printf("gkut2_read_necessary - gkut2_efi_read_file - sym.pub - %lu\n", Status);
+        return Status;
     }
     
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/sym.priv", &sym_priv_size, &sym_priv_freeme);
+    Size = sizeof(res->sym_priv.buffer);
+    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/sym.priv", &Size, &res->sym_priv.buffer[0], 2);
+    res->sym_priv.size = Size;
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_read_file - sym.priv - %lu\n", Status);
-        goto Error;
+        printf("gkut2_read_necessary - gkut2_efi_read_file - sym.priv - %lu\n", Status);
+        return Status;
     }
 
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/geli_key.enc", &geli_key_enc_size, &geli_key_enc_freeme);
+    Size = sizeof(res->geli_key_enc.buffer);
+    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/geli_key.enc", &Size, &res->geli_key_enc.buffer[0], 0);
+    res->geli_key_enc.size = Size;
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_read_file - geli_key.enc - %lu\n", Status);
-        goto Error;
+        printf("gkut2_read_necessary - gkut2_efi_read_file - geli_key.enc - %lu\n", Status);
+        return Status;
     }
 
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/policy_pcr", &policy_pcr_size, &policy_pcr_freeme);
+    Size = sizeof(res->policy_pcr.buffer) - 1;
+    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/policy_pcr", &Size, &res->policy_pcr.buffer[0], 0);
+    res->policy_pcr.size = Size;
+    res->policy_pcr.buffer[Size] = 0;
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_read_file - policy_pcr - %lu\n", Status);
-        goto Error;
+        printf("gkut2_read_necessary - gkut2_efi_read_file - policy_pcr - %lu\n", Status);
+        return Status;
     }
 
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/primary_handle", &primary_handle_size, &primary_handle_freeme);
+    GKUT2B_HANDLE_TEXT primary_handle_text;
+    Size = sizeof(primary_handle_text.buffer) - 1;
+    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/primary_handle", &Size, &primary_handle_text.buffer[0], 0);
+    primary_handle_text.size = Size;
+    primary_handle_text.buffer[Size] = 0;
+    res->primary_handle = strtol(&primary_handle_text.buffer[0], NULL, 0);
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_efi_read_file - primary_handle - %lu\n", Status);
-        goto Error;
+        printf("gkut2_read_necessary - gkut2_efi_read_file - primary_handle - %lu\n", Status);
+        return Status;
     }
-    primary_handle_zeroterm_freeme = strndup(primary_handle_freeme, primary_handle_size);
 
     Status = gkut2_efi_close_volume();
     if (EFI_ERROR(Status)) {
-        printf("gkut2_early - gkut2_close_volume - %lu\n", Status);
-        goto Error;
+        printf("gkut2_read_necessary - gkut2_close_volume - %lu\n", Status);
+        return Status;
     }
 
-    res->iv = iv_freeme;
-    res->sym_pub = sym_pub_freeme;
-    res->sym_priv = sym_priv_freeme;
-    res->geli_key_enc = geli_key_enc_freeme;
-    res->policy_pcr = policy_pcr_freeme;
-    res->iv_size = iv_size;
-    res->sym_pub_size = sym_pub_size;
-    res->sym_priv_size = sym_priv_size;
-    res->geli_key_enc_size = geli_key_enc_size;
-    res->policy_pcr_size = policy_pcr_size;
-    res->primary_handle = strtol(primary_handle_zeroterm_freeme, NULL, 0);
-
-    (void)free(primary_handle_freeme);
-    (void)free(primary_handle_zeroterm_freeme);
-
     return EFI_SUCCESS;
-
-Error:
-    (void)free(iv_freeme);
-    (void)free(sym_pub_freeme);
-    (void)free(sym_priv_freeme);
-    (void)free(geli_key_enc_freeme);
-    (void)free(policy_pcr_freeme);
-    (void)free(primary_handle_freeme);
-    (void)free(primary_handle_zeroterm_freeme);
-
-    return Status;
 }
 
 EFI_STATUS gkut2_start_hmac_session(TPMI_SH_AUTH_SESSION *SessionHandle) {
@@ -175,22 +148,16 @@ EFI_STATUS gkut2_start_policy_session(TPMI_SH_AUTH_SESSION *SessionHandle, TPMS_
 	return EFI_SUCCESS;
 }
 
-EFI_STATUS gkut2_decrypt_key(gkut2_read_necessary_result *input, UINT8 *key, UINT64 *key_size) {
+EFI_STATUS gkut2_decrypt_key(GKUT2_READ_NECESSARY_RESULT *input, UINT8 *key, UINT64 *key_size) {
     EFI_STATUS Status;
     TPMS_PCR_SELECTION pcr_selection;
     TPMI_SH_AUTH_SESSION HmacSessionHandle;
     TPMI_SH_AUTH_SESSION PcrSessionHandle;
-    char *policy_pcr_freeme = strndup(input->policy_pcr, input->policy_pcr_size);
-
-    if (policy_pcr_freeme == NULL) {
-        printf("gkut2_decrypt_key - strndup - NULL\n");
-        goto Error;
-    }
 
     Status = gkut2_start_hmac_session(&HmacSessionHandle);
     if (EFI_ERROR(Status)) {
         printf("gkut2_decrypt_key - gkut2_start_hmac_session - %lu\n", Status);
-        goto Error;
+        return Status;
     }
 
     TPMS_AUTH_COMMAND HmacAuthSession = {
@@ -203,25 +170,25 @@ EFI_STATUS gkut2_decrypt_key(gkut2_read_necessary_result *input, UINT8 *key, UIN
     TPM2B_NAME SymKeyName;
 
     Status = Tpm2Load(input->primary_handle, &HmacAuthSession,
-        input->sym_priv + 2, input->sym_priv_size - 2,
-        input->sym_pub + 2, input->sym_pub_size - 2,
+        &input->sym_priv.buffer[0], input->sym_priv.size,
+        &input->sym_pub.buffer[0], input->sym_pub.size,
         &SymKeyHandle, &SymKeyName);
     if (EFI_ERROR(Status)) {
         printf("gkut2_decrypt_key - Tpm2Load - %lu\n", Status);
-        goto Error;
+        return Status;
     }
 
-    Status = gkut2_parse_efivar_policy_spec(policy_pcr_freeme, &pcr_selection.hash,
+    Status = gkut2_parse_efivar_policy_spec(&input->policy_pcr.buffer[0], &pcr_selection.hash,
         &pcr_selection.pcrSelect[0], &pcr_selection.sizeofSelect);
     if (EFI_ERROR(Status)) {
         printf("gkut2_decrypt_key - gkut2_parse_efivar_policyspec - %lu\n", Status);
-        goto Error;
+        return Status;
     }
 
     Status = gkut2_start_policy_session(&PcrSessionHandle, &pcr_selection);
     if (EFI_ERROR(Status)) {
         printf("gkut2_decrypt_key - gkut2_start_policy_session - %lu\n", Status);
-        goto Error;
+        return Status;
     }
 
     TPMS_AUTH_COMMAND PcrAuthSession = {
@@ -231,37 +198,28 @@ EFI_STATUS gkut2_decrypt_key(gkut2_read_necessary_result *input, UINT8 *key, UIN
         .hmac = { .size = 0}
     };
 
-    TPM2B_IV IvIn;
-    IvIn.size = input->iv_size;
-    memcpy(&IvIn.buffer[0], input->iv, input->iv_size);
-
     TPM2B_MAX_BUFFER InData;
-    InData.size = input->geli_key_enc_size;
-    memcpy(&InData.buffer[0], input->geli_key_enc, input->geli_key_enc_size);
+    InData.size = input->geli_key_enc.size;
+    memcpy(&InData.buffer[0], &input->geli_key_enc.buffer[0], input->geli_key_enc.size);
 
     TPM2B_MAX_BUFFER OutData;
     TPM2B_IV OutIv;
 
     Status = Tpm2EncryptDecrypt(SymKeyHandle, &PcrAuthSession,
         1 /* decrypt */, TPM_ALG_NULL /* mode */,
-        &IvIn, &InData, &OutData, &OutIv);
+        &input->iv, &InData, &OutData, &OutIv);
     if (EFI_ERROR(Status)) {
         printf("gkut2_decrypt_key - Tpm2EncryptDecrypt - %lu\n", Status);
-        goto Error;
+        return Status;
     }
 
     if (OutData.size > *key_size) {
         printf("gkut2_decrypt_key - decrypted key size too large - %d\n", OutData.size);
-        goto Error;
+        return EFI_BUFFER_TOO_SMALL;
     }
 
     memcpy(key, &OutData.buffer[0], OutData.size);
     *key_size = OutData.size;
 
     return EFI_SUCCESS;
-
-Error:
-    (void)free(policy_pcr_freeme);
-
-    return Status;
 }

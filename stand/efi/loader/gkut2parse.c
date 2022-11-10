@@ -61,7 +61,5 @@ pcr_index_too_large:
 		pi++;
 	}
 
-	(void)free(policy_pcr);
-
 	return EFI_SUCCESS;
 }

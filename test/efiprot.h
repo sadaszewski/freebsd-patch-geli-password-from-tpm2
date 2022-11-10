@@ -64,6 +64,13 @@ EFI_STATUS
 
 typedef
 EFI_STATUS
+(EFIAPI *EFI_FILE_SET_POSITION) (
+    IN struct _EFI_FILE_HANDLE  *File,
+    IN UINT64                Position
+    );
+
+typedef
+EFI_STATUS
 (EFIAPI *EFI_FILE_GET_INFO) (
     IN struct _EFI_FILE_HANDLE  *File,
     IN EFI_GUID                 *InformationType,
@@ -75,6 +82,7 @@ typedef struct _EFI_FILE_HANDLE {
     EFI_FILE_OPEN           Open;
     EFI_FILE_CLOSE          Close;
     EFI_FILE_READ           Read;
+    EFI_FILE_SET_POSITION   SetPosition;
     EFI_FILE_GET_INFO       GetInfo;
     void                    *FileObj;
 } EFI_FILE, *EFI_FILE_HANDLE;

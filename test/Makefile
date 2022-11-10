@@ -1,7 +1,7 @@
 ALL=test_encrypt_decrypt test_context_load test_simplefs \
     test_ext_public test_early
 
-CFLAGS+=-I../stand/efi/include -I../stand/efi/loader -I.
+CFLAGS+=-I../stand/efi/include -I../stand/efi/loader -I. -ggdb
 
 all: $(ALL)
 

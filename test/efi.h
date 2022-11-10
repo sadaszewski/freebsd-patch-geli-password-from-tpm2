@@ -47,6 +47,7 @@ extern void *IH;
 #define EFI_NOT_FOUND 3
 #define EFI_UNSUPPORTED 4
 #define EFI_BAD_BUFFER_SIZE 5
+#define EFI_BUFFER_TOO_SMALL 6
 
 //#define EFI_TCG2_SUBMIT_COMMAND 3
 //#define EFI_TCG2_GET_ACTIVE_PCR_BANKS 4

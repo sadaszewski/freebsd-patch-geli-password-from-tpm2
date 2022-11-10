@@ -58,20 +58,19 @@ void test04_gkut2_efi_file_read() {
     EFI_STATUS Status;
     Status = gkut2_efi_open_volume();
     assert(Status == EFI_SUCCESS);
-    UINT8 *Buffer_freeme;
+    UINT8 Buffer[1024];
     UINT64 FileSize = 1024;
-    Status = gkut2_efi_read_file(u"/efi/freebsd/test.txt", &FileSize, &Buffer_freeme);
+    Status = gkut2_efi_read_file(u"/efi/freebsd/test.txt", &FileSize, &Buffer[0], 0);
     assert(Status == EFI_SUCCESS);
     printf("FileSize: %llu\n", FileSize);
-    UINT8 *p = Buffer_freeme;
+    UINT8 *p = &Buffer[0];
     while (*p) {
         printf("%02X ", *p);
         p++;
     }
     printf("\n");
     assert(Status == EFI_SUCCESS);
-    printf("Buffer_freeme: %s\n", Buffer_freeme);
-    (void)free(Buffer_freeme);
+    printf("Buffer_freeme: %s\n", &Buffer[0]);
     Status = gkut2_efi_close_volume();
     assert(Status == EFI_SUCCESS);
     printf("Success!!!\n");

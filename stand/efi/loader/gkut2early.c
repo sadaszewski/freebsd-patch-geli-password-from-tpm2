@@ -106,6 +106,32 @@ Error:
     return Status;
 }
 
+EFI_STATUS gkut2_start_hmac_session(TPMI_SH_AUTH_SESSION *SessionHandle) {
+	EFI_STATUS status;
+
+	TPM2B_DIGEST NonceCaller = { 16 };
+	TPM2B_ENCRYPTED_SECRET Salt = { 0 };
+	TPMT_SYM_DEF Symmetric = { TPM_ALG_NULL };
+	TPM2B_NONCE NonceTPM;
+	status = Tpm2StartAuthSession (
+	    TPM_RH_NULL,	// TpmKey
+	    TPM_RH_NULL,	// Bind
+	    &NonceCaller,
+	    &Salt,
+	    TPM_SE_HMAC,	// SessionType
+	    &Symmetric,
+	    TPM_ALG_SHA256,	//AuthHash
+	    SessionHandle,
+	    &NonceTPM
+	);
+	if (status != EFI_SUCCESS) {
+		printf("Tpm2StartAuthSession() failed - 0x%lx.\n", status);
+		return status;
+	}
+
+	return EFI_SUCCESS;
+}
+
 EFI_STATUS gkut2_start_policy_session(TPMI_SH_AUTH_SESSION *SessionHandle, TPMS_PCR_SELECTION *pcr_selection) {
 	EFI_STATUS status;
 
@@ -152,11 +178,36 @@ EFI_STATUS gkut2_start_policy_session(TPMI_SH_AUTH_SESSION *SessionHandle, TPMS_
 EFI_STATUS gkut2_decrypt_key(gkut2_read_necessary_result *input, UINT8 *key, UINT64 *key_size) {
     EFI_STATUS Status;
     TPMS_PCR_SELECTION pcr_selection;
-    TPMI_SH_AUTH_SESSION SessionHandle;
+    TPMI_SH_AUTH_SESSION HmacSessionHandle;
+    TPMI_SH_AUTH_SESSION PcrSessionHandle;
     char *policy_pcr_freeme = strndup(input->policy_pcr, input->policy_pcr_size);
 
     if (policy_pcr_freeme == NULL) {
         printf("gkut2_decrypt_key - strndup - NULL\n");
+        goto Error;
+    }
+
+    Status = gkut2_start_hmac_session(&HmacSessionHandle);
+    if (EFI_ERROR(Status)) {
+        printf("gkut2_decrypt_key - gkut2_start_hmac_session - %lu\n", Status);
+        goto Error;
+    }
+
+    TPMS_AUTH_COMMAND HmacAuthSession = {
+        .sessionHandle = HmacSessionHandle,
+        .nonce = { .size = 0 },
+        .sessionAttributes = 0,
+        .hmac = { .size = 0}
+    };
+    TPM_HANDLE SymKeyHandle;
+    TPM2B_NAME SymKeyName;
+
+    Status = Tpm2Load(input->primary_handle, &HmacAuthSession,
+        input->sym_priv + 2, input->sym_priv_size - 2,
+        input->sym_pub + 2, input->sym_pub_size - 2,
+        &SymKeyHandle, &SymKeyName);
+    if (EFI_ERROR(Status)) {
+        printf("gkut2_decrypt_key - Tpm2Load - %lu\n", Status);
         goto Error;
     }
 
@@ -167,29 +218,18 @@ EFI_STATUS gkut2_decrypt_key(gkut2_read_necessary_result *input, UINT8 *key, UIN
         goto Error;
     }
 
-    Status = gkut2_start_policy_session(&SessionHandle, &pcr_selection);
+    Status = gkut2_start_policy_session(&PcrSessionHandle, &pcr_selection);
     if (EFI_ERROR(Status)) {
         printf("gkut2_decrypt_key - gkut2_start_policy_session - %lu\n", Status);
         goto Error;
     }
 
-    TPMS_AUTH_COMMAND AuthSession = {
-        .sessionHandle = SessionHandle,
+    TPMS_AUTH_COMMAND PcrAuthSession = {
+        .sessionHandle = PcrSessionHandle,
         .nonce = { .size = 0 },
         .sessionAttributes = 0,
         .hmac = { .size = 0}
     };
-    TPM_HANDLE SymKeyHandle;
-    TPM2B_NAME SymKeyName;
-
-    Status = Tpm2Load(input->primary_handle, &AuthSession,
-        input->sym_priv, input->sym_priv_size,
-        input->sym_pub, input->sym_pub_size,
-        &SymKeyHandle, &SymKeyName);
-    if (EFI_ERROR(Status)) {
-        printf("gkut2_decrypt_key - Tpm2Load - %lu\n", Status);
-        goto Error;
-    }
 
     TPM2B_IV IvIn;
     IvIn.size = input->iv_size;
@@ -202,7 +242,7 @@ EFI_STATUS gkut2_decrypt_key(gkut2_read_necessary_result *input, UINT8 *key, UIN
     TPM2B_MAX_BUFFER OutData;
     TPM2B_IV OutIv;
 
-    Status = Tpm2EncryptDecrypt(SymKeyHandle, &AuthSession,
+    Status = Tpm2EncryptDecrypt(SymKeyHandle, &PcrAuthSession,
         1 /* decrypt */, TPM_ALG_NULL /* mode */,
         &IvIn, &InData, &OutData, &OutIv);
     if (EFI_ERROR(Status)) {

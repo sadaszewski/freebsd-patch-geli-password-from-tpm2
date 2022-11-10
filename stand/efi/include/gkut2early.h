@@ -15,6 +15,8 @@ EFI_STATUS gkut2_read_necessary(gkut2_read_necessary_result *res);
 
 void gkut2_free_read_necessary_result(gkut2_read_necessary_result *res);
 
+EFI_STATUS gkut2_start_hmac_session(TPMI_SH_AUTH_SESSION *SessionHandle);
+
 EFI_STATUS gkut2_start_policy_session(TPMI_SH_AUTH_SESSION *SessionHandle, TPMS_PCR_SELECTION *pcr_selection);
 
 EFI_STATUS gkut2_decrypt_key(gkut2_read_necessary_result *input, UINT8 *key, UINT64 *key_size);

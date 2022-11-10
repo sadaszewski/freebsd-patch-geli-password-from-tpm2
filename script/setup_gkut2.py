@@ -17,8 +17,8 @@ def create_parser():
     parser.add_argument('--pcr-policy', type=str, default='sha256:0,2,4,7,8')
     parser.add_argument('--marker-filename', type=str, default='/.passphrase_marker')
     parser.add_argument('--iv-nbits', type=int, default=128)
-    parser.add_argument('--newpass', type=str)
     parser.add_argument('--no-geli', action='store_true')
+    parser.add_argument('--geli-key-nbits', type=int, default=256)
     return parser
 
 
@@ -39,8 +39,8 @@ def main():
     geom = args.geom or detect_geom()
     print('ELI geom:', geom)
 
-    print('Generating new passphrase...')
-    newpass = args.newpass.encode('utf-8') or random.getrandbits(args.nbits).to_bytes(args.nbits // 8, 'little') 
+    print('Generating GELI key...')
+    newkey = random.getrandbits(args.geli_key_nbits).to_bytes(args.geli_key_nbits // 8, 'little')
 
     print('Generating salt, TPM2 owner password, primary key auth value...')
     newsalt, newownerpass, symauthvalue = [ random.getrandbits(args.nbits).to_bytes(args.nbits // 8, 'little') \
@@ -58,7 +58,7 @@ def main():
     with tempfile.TemporaryDirectory() as d:
         os.chmod(d, 0o700)
 
-        for fnam, data in { '.newpass': newpass, '.newownerpass': newownerpass,
+        for fnam, data in { '.newkey': newkey, '.newownerpass': newownerpass,
             '.symauthvalue': symauthvalue }.items():
             with open(os.path.join(d, fnam), 'wb') as f:
                 f.write(data)
@@ -74,7 +74,7 @@ def main():
         print('Generating passphrase marker...')
         sha256 = hashlib.sha256()
         sha256.update(newsalt)
-        sha256.update(newpass)
+        sha256.update(newkey)
         new_passphrase_marker = sha256.hexdigest()
         with open(args.marker_filename, 'w') as f:
             f.write(new_passphrase_marker)
@@ -97,7 +97,7 @@ def main():
 
         print('Generating policy digest...')
         subprocess.check_output([ 'tpm2_createpolicy',
-            '-L', os.path.join(args.efi_target_dir, 'policydigest'),
+            '-L', os.path.join(d, '.policydigest'),
             '--policy-pcr',
             '-l', args.pcr_policy,
             '-f', os.path.join(d, '.pcrvalues') ])
@@ -113,6 +113,10 @@ def main():
             '-c', '0x80000000',
             '-P', 'file:' + os.path.join(d, '.newownerpass') ])
 
+        print('Write primary handle...')
+        with open(os.path.join(args.efi_target_dir, 'primary_handle'), 'w') as f:
+            f.write('0x%08X' % (0x81000000))
+
         print('Creating symmetric key...')
         subprocess.check_output([ 'tpm2_create',
             '-C', '0x81000000',
@@ -121,16 +125,20 @@ def main():
             '-u', os.path.join(args.efi_target_dir, 'sym.pub'),
             '-r', os.path.join(args.efi_target_dir, 'sym.priv'),
             '-p', 'file:' + os.path.join(d, '.symauthvalue'),
-            '-L', os.path.join(args.efi_target_dir, 'policydigest'),
+            '-L', os.path.join(d, '.policydigest'),
             '-c', os.path.join(d, '.symcontext') ]) 
 
-        print('Encrypting passphrase...')
+        print('Encrypting GELI key...')
         subprocess.check_output([ 'tpm2_encryptdecrypt',
             '-c', os.path.join(d, '.symcontext'),
             '-p', 'file:' + os.path.join(d, '.symauthvalue'),
             '-t', os.path.join(args.efi_target_dir, 'iv'),
-            '-o', os.path.join(args.efi_target_dir, 'passphrase.enc'),
-            os.path.join(d, '.newpass') ]) 
+            '-o', os.path.join(args.efi_target_dir, 'geli_key.enc'),
+            os.path.join(d, '.newkey') ])
+
+        with open(os.path.join(d, '.newkey'), 'ab') as f:
+            f.seek(0)
+            f.write(b'\x00' * len(newkey))
 
         if not args.no_geli:
             print('Modifying GELI passphrase...')

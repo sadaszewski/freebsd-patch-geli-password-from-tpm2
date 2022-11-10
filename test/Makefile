@@ -58,15 +58,26 @@ test_early: test_early.c \
     ../stand/efi/loader/gkut2early.c \
     ../stand/efi/loader/gkut2fs.c \
     ../stand/efi/loader/gkut2parse.c \
+    ../stand/efi/loader/gkut2auth.c \
+    ../stand/efi/loader/gkut2tcg.c \
+    ../stand/efi/loader/gkut2dec.c \
     mock_bs.c \
-    mock_simplefs.c
+    mock_simplefs.c \
+    mock_tpm2_api.c \
+    mock_tpm2_impl.c
 	gcc $(CFLAGS) test_early.c \
         ../stand/efi/loader/gkut2early.c \
         ../stand/efi/loader/gkut2fs.c \
         ../stand/efi/loader/gkut2parse.c \
+        ../stand/efi/loader/gkut2auth.c \
+        ../stand/efi/loader/gkut2tcg.c \
+        ../stand/efi/loader/gkut2dec.c \
         mock_bs.c \
         mock_simplefs.c \
-        -o test_early
+        mock_tpm2_api.c \
+	mock_tpm2_impl.c \
+        -o test_early \
+        -ltss2-tcti-swtpm
 
 test_context_load: test_context_load.c
 	gcc $(CFLAGS) test_context_load.c -o test_context_load

@@ -60,6 +60,7 @@ dkms.conf
 /test/test_ext_public
 /test/test_early
 /test/test_flow
+/test/test_util
 
 *.core
 

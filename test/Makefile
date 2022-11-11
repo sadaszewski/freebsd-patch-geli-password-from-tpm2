@@ -1,5 +1,5 @@
 ALL=test_encrypt_decrypt test_context_load test_simplefs \
-    test_ext_public test_early test_flow
+    test_ext_public test_early test_flow test_util
 
 CFLAGS+=-I../stand/efi/include -I../stand/efi/loader -I. -ggdb
 
@@ -113,6 +113,12 @@ test_flow: test_flow.c \
 	mock_geli.c \
         -o test_flow \
         -ltss2-tcti-swtpm
+
+test_util: test_util.c \
+    ../stand/efi/loader/gkut2util.c
+	gcc $(CFLAGS) test_util.c \
+	../stand/efi/loader/gkut2util.c \
+	-o test_util
 
 test_context_load: test_context_load.c
 	gcc $(CFLAGS) test_context_load.c -o test_context_load

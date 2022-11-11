@@ -40,6 +40,7 @@ def patch_stand_makefile(args):
         'SRCS += gkut2parse.c',
         'SRCS += gkut2pcr.c',
         'SRCS += gkut2tcg.c',
+        'SRCS += gkut2util.c',
         'CFLAGS += -DLOADER_GKUT2',
         '.ifdef LOADER_GKUT2_PCRHANDLE',
         'CFLAGS += -DLOADER_GKUT2_PCRHANDLE=\\"${LOADER_GKUT2_PCRHANDLE}\\"',

@@ -46,7 +46,11 @@ static EFI_STATUS DummyOpen (
         FileNameLen++;
     char *FileNameMB = (char*) malloc(FileNameLen + 1);
     for (int i = 0; i < FileNameLen; i++) {
-        FileNameMB[i] = FileName[i];
+        if (FileName[i] == '\\') {
+            FileNameMB[i] = '/';
+        } else {
+            FileNameMB[i] = FileName[i];
+        }
     }
     FileNameMB[FileNameLen] = 0;
     char *FileNameFinal = (char*) malloc(FileNameLen + strlen(MOCKFS_PREFIX) + 1);
@@ -135,6 +139,12 @@ static EFI_STATUS DummyGetInfo(
         printf("DummyGetInfo() - unsupported on volume in mock implementation.\n");
         return EFI_UNSUPPORTED;
     }
+
+    if (*BufferSize < sizeof(EFI_FILE_INFO)) {
+        *BufferSize = sizeof(EFI_FILE_INFO);
+        return EFI_BUFFER_TOO_SMALL;
+    }
+    *BufferSize = sizeof(EFI_FILE_INFO);
 
     size_t pos = ftell((FILE*)File->FileObj);
     fseek((FILE*)File->FileObj, 0, SEEK_END);

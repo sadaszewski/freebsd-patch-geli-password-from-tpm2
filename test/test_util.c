@@ -42,7 +42,7 @@ void test_03_hex2bin_bad_char() {
     UINT64 bin_len;
     EFI_STATUS status;
     status = gkut2_hex2bin(&hex[0], &bin[0], &bin_len);
-    assert(status == EFI_BUFFER_TOO_SMALL);
+    assert(status == EFI_INVALID_PARAMETER);
     printf("bin_len: %llu\n", bin_len);
     printf("bin: ");
     for (UINT64 i = 0; i < bin_len; i++) {

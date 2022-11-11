@@ -1,5 +1,7 @@
 #include <efi.h>
 
+#include <stdio.h>
+
 EFI_STATUS gkut2_bin2hex(UINT8 *bin, UINT64 bin_len, UINT8 *hex) {
     if (bin == NULL || hex == NULL) {
         return EFI_INVALID_PARAMETER;
@@ -20,9 +22,23 @@ EFI_STATUS gkut2_hex2bin(UINT8 *hex, UINT8 *bin, UINT64 *bin_len) {
 
     *bin_len = 0;
     while (*hex) {
-        UINT32 val;
-        if (sscanf(hex, "%02x", &val) != 1) {
-            return EFI_BUFFER_TOO_SMALL;
+        UINT32 val = 0;
+        for (int i = 0; i < 2; i++) {
+            UINT8 ch = hex[i];
+            if (ch == 0) {
+                return EFI_BUFFER_TOO_SMALL;
+            }
+            if (ch >= 'a' && ch <= 'f') {
+                ch = 10 + (ch - 'a');
+            } else if (ch >= 'A' && ch <= 'F') {
+                ch = 10 + (ch - 'A');
+            } else if (ch >= '0' && ch <= '9') {
+                ch = ch - '0';
+            } else {
+                return EFI_INVALID_PARAMETER;
+            }
+            val <<= 4;
+            val |= ch;
         }
         *bin = val;
         bin++;

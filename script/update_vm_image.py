@@ -84,6 +84,10 @@ def main():
             cwd=os.path.join(args.freebsd_src_dir, 'stand'),
             env=env, check=True)
 
+        print('copy setup_gkut2.py script...')
+        shutil.copyfile('setup_gkut2.py',
+            os.path.join(args.alt_root, 'usr', 'sbin', 'setup_gkut2.py'))
+
         print('copy to EFI partition')
         os.makedirs(os.path.join(args.alt_root, 'boot', 'efi', 'efi', 'boot'), exist_ok=True)
         os.makedirs(os.path.join(args.alt_root, 'boot', 'efi', 'efi', 'freebsd'), exist_ok=True)

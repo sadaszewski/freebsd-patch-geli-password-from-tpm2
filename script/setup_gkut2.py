@@ -109,7 +109,7 @@ def main():
         print('Creating primary key...')
         subprocess.check_output([ 'tpm2_createprimary',
             '-c', os.path.join(d, '.primarycontext'),
-            '-a', 'fixedtpm|fixedparent|sensitivedataorigin|userwithauth|restricted|decrypt',
+            '-a', 'fixedtpm|fixedparent|sensitivedataorigin|userwithauth|restricted|decrypt|noda',
             '-P', 'file:' + os.path.join(d, '.newownerpass') ])
 
         print('Persisting primary key...')

@@ -6,3 +6,6 @@
 {"type": "ADD", "timestamp": "2022-11-10T16:46:01.094425", "description": "Write out salt during setup", "taskId": 4}
 {"type": "ADD", "timestamp": "2022-11-10T16:46:09.396228", "description": "Load salt in gkut2_read_necessary", "taskId": 5}
 {"type": "ADD", "timestamp": "2022-11-10T16:46:45.475019", "description": "In GELI set key rather than passphrase", "taskId": 6}
+{"type": "ADD", "timestamp": "2022-11-11T14:19:58.853023", "description": "Change slashes to backslashes in gkut2fs", "taskId": 7}
+{"type": "ADD", "timestamp": "2022-11-11T14:27:15.975270", "description": "GetInfo buffer must be allocated dynamically", "taskId": 8}
+{"type": "ADD", "timestamp": "2022-11-11T14:36:41.219848", "description": "Write policy_pcr file in setup_gkut2", "taskId": 9}

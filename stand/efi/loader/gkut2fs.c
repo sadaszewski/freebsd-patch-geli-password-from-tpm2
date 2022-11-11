@@ -76,22 +76,39 @@ EFI_STATUS gkut2_efi_close_volume() {
 
 
 EFI_STATUS gkut2_efi_file_size(EFI_FILE_HANDLE FileHandle, UINT64 *FileSize) {
-    UINTN BufferSize = sizeof(EFI_FILE_INFO);
+    UINTN BufferSize;
     EFI_STATUS Status;
-    EFI_FILE_INFO Buffer;
+    UINT8 *Buffer_freeme;
     EFI_GUID FileInfoIdGuid = EFI_FILE_INFO_ID;
 
+    BufferSize = 0;
     Status = FileHandle->GetInfo(FileHandle,
         &FileInfoIdGuid,
         &BufferSize,
-        &Buffer);
-
-    if (EFI_ERROR(Status)) {
+        NULL);
+    if (Status != EFI_BUFFER_TOO_SMALL) {
         printf("gkut2_efi_file_size() - GetInfo() - %lu\n", Status);
         return Status;
     }
 
-    *FileSize = Buffer.FileSize;
+    Buffer_freeme = (UINT8*) malloc(BufferSize);
+    if (Buffer_freeme == NULL) {
+        printf("gkut2_efi_file_size() - Buffer_freeme - failed to allocated %lu bytes\n", BufferSize);
+        return EFI_BUFFER_TOO_SMALL;
+    }
+
+    Status = FileHandle->GetInfo(FileHandle,
+        &FileInfoIdGuid,
+        &BufferSize,
+        Buffer_freeme);
+    if (EFI_ERROR(Status)) {
+        printf("gkut2_efi_file_size() - GetInfo() - %lu\n", Status);
+        (void)free(Buffer_freeme);
+        return Status;
+    }
+
+    *FileSize = ((EFI_FILE_INFO*) Buffer_freeme)->FileSize;
+    (void)free(Buffer_freeme);
 
     return EFI_SUCCESS;
 }
@@ -104,7 +121,11 @@ EFI_STATUS gkut2_efi_read_file(CHAR8 *FileName, UINT64 *MaxFileSize, UINT8 *Buff
     CHAR16 FileName16[MAXPATHLEN];
 
     for (int i = 0; i < MAXPATHLEN; i++) {
-        FileName16[i] = FileName[i];
+        if (FileName[i] == '/') {
+            FileName16[i] = '\\';
+        } else {
+            FileName16[i] = FileName[i];
+        }
         if (FileName[i] == 0) {
             break;
         }
@@ -112,9 +133,9 @@ EFI_STATUS gkut2_efi_read_file(CHAR8 *FileName, UINT64 *MaxFileSize, UINT8 *Buff
 
     Status = mVolume->Open(mVolume, &FileHandle, FileName16,
         EFI_FILE_MODE_READ,
-        EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
+        0);
     if (EFI_ERROR(Status)) {
-        printf("gkut2_efi_read_file() - mVolume->Open() - %lu\n", Status);
+        printf("gkut2_efi_read_file() - mVolume->Open() - 0x%lX\n", Status);
         return Status;
     }
 

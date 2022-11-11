@@ -12,6 +12,8 @@
 #include <efichar.h>
 #include <efiprot.h>
 
+#define MAXPATHLEN 1024
+
 extern EFI_LOADED_IMAGE *boot_img; // in stand's main.c
 
 
@@ -95,12 +97,20 @@ EFI_STATUS gkut2_efi_file_size(EFI_FILE_HANDLE FileHandle, UINT64 *FileSize) {
 }
 
 
-EFI_STATUS gkut2_efi_read_file(CHAR16 *FileName, UINT64 *MaxFileSize, UINT8 *Buffer, UINT64 Offset) {
+EFI_STATUS gkut2_efi_read_file(CHAR8 *FileName, UINT64 *MaxFileSize, UINT8 *Buffer, UINT64 Offset) {
     EFI_STATUS Status;
     EFI_FILE_HANDLE FileHandle;
     UINT64 FileSize;
+    CHAR16 FileName16[MAXPATHLEN];
 
-    Status = mVolume->Open(mVolume, &FileHandle, FileName,
+    for (int i = 0; i < MAXPATHLEN; i++) {
+        FileName16[i] = FileName[i];
+        if (FileName[i] == 0) {
+            break;
+        }
+    }
+
+    Status = mVolume->Open(mVolume, &FileHandle, FileName16,
         EFI_FILE_MODE_READ,
         EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
     if (EFI_ERROR(Status)) {

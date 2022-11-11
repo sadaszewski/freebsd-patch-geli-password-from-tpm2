@@ -394,6 +394,8 @@ EFI_STATUS Tpm2CreatePrimary(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMAND 
     memcpy(Buffer, &InPublic->publicArea.authPolicy.buffer[0], InPublic->publicArea.authPolicy.size);
     Buffer += InPublic->publicArea.authPolicy.size;
     // WriteUnaligned16(InPublic.TPMU_PUBLIC_PARAMS)
+
+    return EFI_NOT_READY;
 }
 
 void Uint32ToObjectAttributes(UINT32 AttrIn, TPMA_OBJECT *AttrOut) {
@@ -590,8 +592,8 @@ EFI_STATUS Tpm2CreatePrimaryAes(TPMI_RH_HIERARCHY PrimaryHandle, TPMS_AUTH_COMMA
     Buffer += sizeof(UINT16);
     WriteUnaligned16((UINT16*) PublicSize, SwapBytes16( (UINT16)( Buffer - PublicSize - 2 ) )); // write it here
     printf("PublicSize: %d\n", (UINT16)( Buffer - PublicSize - 2 ));
-    printf("sizeof(TPMU_PUBLIC_PARMS): %d\n", sizeof(TPMU_PUBLIC_PARMS));
-    printf("sizeof(TPMS_SYMCIPHER_PARMS): %d\n", sizeof(TPMS_SYMCIPHER_PARMS));
+    printf("sizeof(TPMU_PUBLIC_PARMS): %lu\n", sizeof(TPMU_PUBLIC_PARMS));
+    printf("sizeof(TPMS_SYMCIPHER_PARMS): %lu\n", sizeof(TPMS_SYMCIPHER_PARMS));
 
     Status = Tpm2CreatePrimary_Epilogue(OutsideInfo, PcrSelection, // in
         ObjectHandle, OutPublic, CreationData, // out

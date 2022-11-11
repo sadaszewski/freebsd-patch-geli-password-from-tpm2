@@ -29,24 +29,20 @@ def patch_stand_makefile(args):
 
     lines = lines[:i+1] + [
         '',
-        '.if ${MK_LOADER_TPM2_PASSPHRASE} == "yes"',
-        'SRCS += tpm2.c',
-        'SRCS += tpm2nv.c',
-        'SRCS += gkut2fs.c',
+        '.if ${MK_LOADER_GKUT2} == "yes"',
+        'SRCS += gkut2auth.c',
+        'SRCS += gkut2b64.c',
         'SRCS += gkut2dec.c',
+        'SRCS += gkut2early.c',
+        'SRCS += gkut2flow.c',
+        'SRCS += gkut2fs.c',
+        'SRCS += gkut2late.c',
+        'SRCS += gkut2parse.c',
+        'SRCS += gkut2pcr.c',
         'SRCS += gkut2tcg.c',
-        'CFLAGS += -DLOADER_TPM2_PASSPHRASE',
-        '.ifdef LOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT',
-        'CFLAGS += -DLOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT=\\"${LOADER_TPM2_PASSPHRASE_POLICYPCR_DEFAULT}\\"',
-        '.endif',
-        '.ifdef LOADER_TPM2_PASSPHRASE_NVINDEX_DEFAULT',
-        'CFLAGS += -DLOADER_TPM2_PASSPHRASE_NVINDEX_DEFAULT=\\"${LOADER_TPM2_PASSPHRASE_NVINDEX_DEFAULT}\\"',
-        '.endif',
-        '.ifdef LOADER_TPM2_PASSPHRASE_SALT_DEFAULT',
-        'CFLAGS += -DLOADER_TPM2_PASSPHRASE_SALT_DEFAULT=\\"${LOADER_TPM2_PASSPHRASE_SALT_DEFAULT}\\"',
-        '.endif',
-        '.ifdef LOADER_TPM2_PASSPHRASE_PCRHANDLE',
-        'CFLAGS += -DLOADER_TPM2_PASSPHRASE_PCRHANDLE=\\"${LOADER_TPM2_PASSPHRASE_PCRHANDLE}\\"',
+        'CFLAGS += -DLOADER_GKUT2',
+        '.ifdef LOADER_GKUT2_PCRHANDLE',
+        'CFLAGS += -DLOADER_GKUT2_PCRHANDLE=\\"${LOADER_GKUT2_PCRHANDLE}\\"',
         '.endif',
         '.endif',
     ] + lines[i+1:]
@@ -69,9 +65,9 @@ def patch_stand_main(args):
 
     lines = lines[:i+1] + [
         '',
-        '#ifdef LOADER_TPM2_PASSPHRASE',
-        '#include "efitpm2.h"',
-        '#include "efitpm2nv.h"',
+        '#ifdef LOADER_GKUT2',
+        '#include "gkut2flow.h"',
+        'GKUT2_STATE gkut2_state = {};',
         '#endif',
     ] + lines[i+1:]
 
@@ -83,10 +79,8 @@ def patch_stand_main(args):
 
     lines = lines[:i+1] + [
         '',
-        '#ifdef LOADER_TPM2_PASSPHRASE',
-        '\ttpm2_check_efivars();',
-        '\ttpm2_retrieve_passphrase();',
-        '\ttpm2_pcr_extend();',
+        '#ifdef LOADER_GKUT2',
+        '\tgkut2_early(&gkut2_state);',
         '#endif',
     ] + lines[i+1:]
 
@@ -104,8 +98,8 @@ def patch_stand_main(args):
 
     lines = lines[:i+1] + [
         '',
-        '#ifdef LOADER_TPM2_PASSPHRASE',
-        '\ttpm2_check_passphrase_marker();',
+        '#ifdef LOADER_GKUT2',
+        '\tgkut2_late(&gkut2_state);',
         '#endif',
     ] + lines[i+1:]
 
@@ -127,8 +121,9 @@ def patch_stand_interp(args):
 
     lines = lines[:i+1] + [
         '',
-        '#if defined(EFI) && defined(LOADER_TPM2_PASSPHRASE)',
-        'void destroy_crypto_info(void); // ../efi/loader/tpm2.c',
+        '#if defined(EFI) && defined(LOADER_GKUT2)',
+        '#include "gkut2flow.h"',
+        'extern GKUT2_STATE gkut2_state; // ../efi/loader/main.c',
         '#endif',
     ] + lines[i+1:]
 
@@ -140,10 +135,10 @@ def patch_stand_interp(args):
 
     lines = lines[:i+1] + [
         '',
-        '#if defined(EFI) && defined(LOADER_TPM2_PASSPHRASE)',
-        '\tif (getenv("kern.geom.eli.passphrase.from_tpm2.was_retrieved")[0] == \'1\') {',
+        '#if defined(EFI) && defined(LOADER_GKUT2)',
+        '\tif (gkut2_state.KeyWasDecrypted) {',
         '\t\t// we cannot allow any interaction',
-        '\t\tdestroy_crypto_info();',
+        '\t\tgkut2_destroy_crypto_info();',
 		'\t\texit(-1);',
         '\t}',
         '#endif',
@@ -174,7 +169,7 @@ def patch_src_opts_mk(args):
     lines[i] += ' \\'
 
     lines = lines[:i+1] + [
-        '    LOADER_TPM2_PASSPHRASE'
+        '    LOADER_GKUT2'
     ] + lines[i+1:]
 
     with open(fname, 'w') as f:

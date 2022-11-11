@@ -36,7 +36,7 @@ void test_02_file_open() {
     Status = Volume->OpenVolume(Volume, &Fs);
     assert(Status == EFI_SUCCESS);
     EFI_FILE_HANDLE File;
-    Status = Fs->Open(Fs, &File, u"/efi/freebsd/test.txt", EFI_FILE_MODE_READ, 0); 
+    Status = Fs->Open(Fs, &File, u"/efi/freebsd/test.txt", EFI_FILE_MODE_READ, 0);
     assert(Status == EFI_SUCCESS);
     Status = File->Close(File);
     assert(Status == EFI_SUCCESS);
@@ -60,7 +60,7 @@ void test04_gkut2_efi_file_read() {
     assert(Status == EFI_SUCCESS);
     UINT8 Buffer[1024];
     UINT64 FileSize = 1024;
-    Status = gkut2_efi_read_file(u"/efi/freebsd/test.txt", &FileSize, &Buffer[0], 0);
+    Status = gkut2_efi_read_file("/efi/freebsd/test.txt", &FileSize, &Buffer[0], 0);
     assert(Status == EFI_SUCCESS);
     printf("FileSize: %llu\n", FileSize);
     UINT8 *p = &Buffer[0];

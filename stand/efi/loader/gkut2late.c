@@ -8,16 +8,12 @@
 
 #include <crypto/sha2/sha256.h>
 
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/stat.h>
-
-#ifndef LOADER_TPM2_PASSPHRASE_PCRHANDLE
-#define LOADER_TPM2_PASSPHRASE_PCRHANDLE 8
+#ifndef LOADER_GKUT2_PCRHANDLE
+#define LOADER_GKUT2_PCRHANDLE 8
 #endif
 
 
-static void gkut2_sha256(const char *data, size_t n, char *digest) {
+void gkut2_sha256(const char *data, size_t n, char *digest) {
 	SHA256_CTX ctx;
 
 	SHA256_Init(&ctx);
@@ -37,10 +33,9 @@ static void gkut2_sha256_hexdigest(const unsigned char *digest, char *digest_hum
 EFI_STATUS gkut2_check_passphrase_marker(GKUT2B_SALT *salt, GKUT2B_GELI_KEY *geli_key) {
 	int fd;
 	struct stat st;
-	BYTE buf[SHA256_DIGEST_LENGTH * 2 + 1];
+	BYTE buf[SHA256_DIGEST_LENGTH];
 	SHA256_CTX ctx;
 	unsigned char digest[SHA256_DIGEST_LENGTH];
-	char digest_human_readable[SHA256_DIGEST_LENGTH * 2 + 1];
 
 	if ((fd = open("/.passphrase_marker", O_RDONLY)) < 0) {
 		printf("Selected rootfs does not contain the passphrase marker!\n");
@@ -70,16 +65,14 @@ EFI_STATUS gkut2_check_passphrase_marker(GKUT2B_SALT *salt, GKUT2B_GELI_KEY *gel
 		close(fd);
 		return EFI_BAD_BUFFER_SIZE;
 	}
-	buf[st.st_size] = '\0';
 	close(fd);
 
 	SHA256_Init(&ctx);
     SHA256_Update(&ctx, &salt->buffer[0], salt->size);
 	SHA256_Update(&ctx, &geli_key->buffer[0], geli_key->size);
 	SHA256_Final(digest, &ctx);
-	gkut2_sha256_hexdigest(digest, digest_human_readable);
 
-	if (strncmp(buf, digest_human_readable, SHA256_DIGEST_LENGTH * 2 + 1) != 0) {
+	if (strncmp(buf, digest, SHA256_DIGEST_LENGTH) != 0) {
 		printf("Passphrase marker does not match!\n");
 		return EFI_INVALID_PARAMETER;
 	}
@@ -90,7 +83,7 @@ EFI_STATUS gkut2_check_passphrase_marker(GKUT2B_SALT *salt, GKUT2B_GELI_KEY *gel
 
 
 EFI_STATUS gkut2_pcr_extend() {
-    TPMI_DH_PCR         PcrHandle = LOADER_TPM2_PASSPHRASE_PCRHANDLE;
+    TPMI_DH_PCR         PcrHandle = LOADER_GKUT2_PCRHANDLE;
     TPML_DIGEST_VALUES  Digests = {
         .count = 1,
         .digests = {

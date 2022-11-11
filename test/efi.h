@@ -5,8 +5,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+
 typedef unsigned char BOOLEAN;
 typedef char INT8;
+typedef unsigned char CHAR8;
 typedef short INT16;
 typedef unsigned short CHAR16;
 typedef unsigned char UINT8;
@@ -48,6 +53,7 @@ extern void *IH;
 #define EFI_UNSUPPORTED 4
 #define EFI_BAD_BUFFER_SIZE 5
 #define EFI_BUFFER_TOO_SMALL 6
+#define EFI_NOT_READY 7
 
 //#define EFI_TCG2_SUBMIT_COMMAND 3
 //#define EFI_TCG2_GET_ACTIVE_PCR_BANKS 4

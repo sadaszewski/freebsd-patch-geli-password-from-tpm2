@@ -18,7 +18,7 @@ def create_parser():
     parser.add_argument('--marker-filename', type=str, default='/.passphrase_marker')
     parser.add_argument('--iv-nbits', type=int, default=128)
     parser.add_argument('--no-geli', action='store_true')
-    parser.add_argument('--geli-key-nbits', type=int, default=256)
+    parser.add_argument('--geli-key-nbits', type=int, default=512)
     return parser
 
 
@@ -75,8 +75,8 @@ def main():
         sha256 = hashlib.sha256()
         sha256.update(newsalt)
         sha256.update(newkey)
-        new_passphrase_marker = sha256.hexdigest()
-        with open(args.marker_filename, 'w') as f:
+        new_passphrase_marker = sha256.digest()
+        with open(args.marker_filename, 'wb') as f:
             f.write(new_passphrase_marker)
         os.chmod(args.marker_filename, 0o600)
 

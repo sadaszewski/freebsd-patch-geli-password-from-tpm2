@@ -1,3 +1,8 @@
 {"type": "ADD", "timestamp": "2022-10-25T20:51:30.708171", "description": "Use freeenv() to free variables after use in tpm2cpm.c", "taskId": 1}
 {"type": "FINISH", "timestamp": "2022-10-27T20:44:35.540205", "taskId": 1}
 {"type": "ADD", "timestamp": "2022-10-27T22:21:31.845237", "description": "Unset kenv vars when kenv becomes dynamic in addition to wiping when static", "taskId": 2}
+{"type": "CANCEL", "timestamp": "2022-11-10T16:42:59.815159", "taskId": 2}
+{"type": "ADD", "timestamp": "2022-11-10T16:43:21.053393", "description": "Update tpm2cpm to take into account that we are not using env vars anymore", "taskId": 3}
+{"type": "ADD", "timestamp": "2022-11-10T16:46:01.094425", "description": "Write out salt during setup", "taskId": 4}
+{"type": "ADD", "timestamp": "2022-11-10T16:46:09.396228", "description": "Load salt in gkut2_read_necessary", "taskId": 5}
+{"type": "ADD", "timestamp": "2022-11-10T16:46:45.475019", "description": "In GELI set key rather than passphrase", "taskId": 6}

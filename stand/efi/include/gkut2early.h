@@ -36,6 +36,7 @@ typedef struct {
 } GKUT2B_PUBLIC;
 
 typedef struct {
+    GKUT2B_SALT salt;
     TPM2B_IV iv;
     GKUT2B_PUBLIC sym_pub;
     TPM2B_PRIVATE sym_priv;

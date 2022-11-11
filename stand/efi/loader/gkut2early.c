@@ -4,6 +4,8 @@
 #include "gkut2parse.h"
 #include "gkut2auth.h"
 
+#include <stdio.h>
+
 EFI_STATUS gkut2_read_necessary(GKUT2_READ_NECESSARY_RESULT *res) {
     EFI_STATUS Status;
     UINT64 Size;
@@ -18,8 +20,16 @@ EFI_STATUS gkut2_read_necessary(GKUT2_READ_NECESSARY_RESULT *res) {
         return Status;
     }
 
+    Size = sizeof(res->salt.buffer);
+    Status = gkut2_efi_read_file("/efi/freebsd/gkut2/salt", &Size, &res->salt.buffer[0], 0);
+    res->salt.size = Size;
+    if (EFI_ERROR(Status)) {
+        printf("gkut2_read_necessary - gkut2_efi_read_file - salt - %lu\n", Status);
+        return Status;
+    }
+
     Size = sizeof(res->iv.buffer);
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/iv", &Size, &res->iv.buffer[0], 0);
+    Status = gkut2_efi_read_file("/efi/freebsd/gkut2/iv", &Size, &res->iv.buffer[0], 0);
     res->iv.size = Size;
     if (EFI_ERROR(Status)) {
         printf("gkut2_read_necessary - gkut2_efi_read_file - iv - %lu\n", Status);
@@ -27,7 +37,7 @@ EFI_STATUS gkut2_read_necessary(GKUT2_READ_NECESSARY_RESULT *res) {
     }
 
     Size = sizeof(res->sym_pub.buffer);
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/sym.pub", &Size, (UINT8*) &res->sym_pub.buffer[0], 2);
+    Status = gkut2_efi_read_file("/efi/freebsd/gkut2/sym.pub", &Size, (UINT8*) &res->sym_pub.buffer[0], 2);
     res->sym_pub.size = Size;
     if (EFI_ERROR(Status)) {
         printf("gkut2_read_necessary - gkut2_efi_read_file - sym.pub - %lu\n", Status);
@@ -35,7 +45,7 @@ EFI_STATUS gkut2_read_necessary(GKUT2_READ_NECESSARY_RESULT *res) {
     }
     
     Size = sizeof(res->sym_priv.buffer);
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/sym.priv", &Size, &res->sym_priv.buffer[0], 2);
+    Status = gkut2_efi_read_file("/efi/freebsd/gkut2/sym.priv", &Size, &res->sym_priv.buffer[0], 2);
     res->sym_priv.size = Size;
     if (EFI_ERROR(Status)) {
         printf("gkut2_read_necessary - gkut2_efi_read_file - sym.priv - %lu\n", Status);
@@ -43,7 +53,7 @@ EFI_STATUS gkut2_read_necessary(GKUT2_READ_NECESSARY_RESULT *res) {
     }
 
     Size = sizeof(res->geli_key_enc.buffer);
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/geli_key.enc", &Size, &res->geli_key_enc.buffer[0], 0);
+    Status = gkut2_efi_read_file("/efi/freebsd/gkut2/geli_key.enc", &Size, &res->geli_key_enc.buffer[0], 0);
     res->geli_key_enc.size = Size;
     if (EFI_ERROR(Status)) {
         printf("gkut2_read_necessary - gkut2_efi_read_file - geli_key.enc - %lu\n", Status);
@@ -51,7 +61,7 @@ EFI_STATUS gkut2_read_necessary(GKUT2_READ_NECESSARY_RESULT *res) {
     }
 
     Size = sizeof(res->policy_pcr.buffer) - 1;
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/policy_pcr", &Size, &res->policy_pcr.buffer[0], 0);
+    Status = gkut2_efi_read_file("/efi/freebsd/gkut2/policy_pcr", &Size, &res->policy_pcr.buffer[0], 0);
     res->policy_pcr.size = Size;
     res->policy_pcr.buffer[Size] = 0;
     if (EFI_ERROR(Status)) {
@@ -61,7 +71,7 @@ EFI_STATUS gkut2_read_necessary(GKUT2_READ_NECESSARY_RESULT *res) {
 
     GKUT2B_HANDLE_TEXT primary_handle_text;
     Size = sizeof(primary_handle_text.buffer) - 1;
-    Status = gkut2_efi_read_file(u"/efi/freebsd/gkut2/primary_handle", &Size, &primary_handle_text.buffer[0], 0);
+    Status = gkut2_efi_read_file("/efi/freebsd/gkut2/primary_handle", &Size, &primary_handle_text.buffer[0], 0);
     primary_handle_text.size = Size;
     primary_handle_text.buffer[Size] = 0;
     res->primary_handle = strtol(&primary_handle_text.buffer[0], NULL, 0);

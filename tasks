@@ -10,3 +10,9 @@
 {"type": "ADD", "timestamp": "2022-11-11T14:27:15.975270", "description": "GetInfo buffer must be allocated dynamically", "taskId": 8}
 {"type": "ADD", "timestamp": "2022-11-11T14:36:41.219848", "description": "Write policy_pcr file in setup_gkut2", "taskId": 9}
 {"type": "FINISH", "timestamp": "2022-11-11T14:40:48.645429", "taskId": 9}
+{"type": "FINISH", "timestamp": "2022-11-11T15:09:03.588743", "taskId": 4}
+{"type": "FINISH", "timestamp": "2022-11-11T15:09:07.333248", "taskId": 5}
+{"type": "FINISH", "timestamp": "2022-11-11T17:49:05.266381", "taskId": 7}
+{"type": "FINISH", "timestamp": "2022-11-11T17:49:08.670270", "taskId": 8}
+{"type": "ADD", "timestamp": "2022-11-11T19:04:00.777032", "description": "GELI key needs to take GELI metadata salt into account", "taskId": 10}
+{"type": "ADD", "timestamp": "2022-11-11T20:50:24.175102", "description": "Move GELI key HMAC compute into stand", "taskId": 11}

@@ -61,6 +61,7 @@ dkms.conf
 /test/test_early
 /test/test_flow
 /test/test_util
+__pycache__
 
 *.core
 

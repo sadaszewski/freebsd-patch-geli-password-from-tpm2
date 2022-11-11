@@ -9,3 +9,4 @@
 {"type": "ADD", "timestamp": "2022-11-11T14:19:58.853023", "description": "Change slashes to backslashes in gkut2fs", "taskId": 7}
 {"type": "ADD", "timestamp": "2022-11-11T14:27:15.975270", "description": "GetInfo buffer must be allocated dynamically", "taskId": 8}
 {"type": "ADD", "timestamp": "2022-11-11T14:36:41.219848", "description": "Write policy_pcr file in setup_gkut2", "taskId": 9}
+{"type": "FINISH", "timestamp": "2022-11-11T14:40:48.645429", "taskId": 9}

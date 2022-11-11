@@ -56,6 +56,9 @@ def main():
     with open(os.path.join(args.efi_target_dir, 'iv'), 'wb') as f:
         f.write(iv)
 
+    with open(os.path.join(args.efi_target_dir, 'policy_pcr'), 'w') as f:
+        f.write(args.pcr_policy)
+
     with tempfile.TemporaryDirectory() as d:
         os.chmod(d, 0o700)
 

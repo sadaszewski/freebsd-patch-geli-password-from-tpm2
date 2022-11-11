@@ -31,7 +31,6 @@ def patch_stand_makefile(args):
         '',
         '.if ${MK_LOADER_GKUT2} == "yes"',
         'SRCS += gkut2auth.c',
-        'SRCS += gkut2b64.c',
         'SRCS += gkut2dec.c',
         'SRCS += gkut2early.c',
         'SRCS += gkut2flow.c',

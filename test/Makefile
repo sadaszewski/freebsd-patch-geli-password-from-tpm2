@@ -89,7 +89,7 @@ test_flow: test_flow.c \
     ../stand/efi/loader/gkut2late.c \
     ../stand/efi/loader/gkut2flow.c \
     ../stand/efi/loader/gkut2pcr.c \
-    ../stand/efi/loader/gkut2b64.c \
+    ../stand/efi/loader/gkut2util.c \
     mock_bs.c \
     mock_simplefs.c \
     mock_tpm2_api.c \
@@ -105,7 +105,7 @@ test_flow: test_flow.c \
         ../stand/efi/loader/gkut2late.c \
         ../stand/efi/loader/gkut2flow.c \
         ../stand/efi/loader/gkut2pcr.c \
-        ../stand/efi/loader/gkut2b64.c \
+        ../stand/efi/loader/gkut2util.c \
         mock_bs.c \
         mock_simplefs.c \
         mock_tpm2_api.c \

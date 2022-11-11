@@ -5,7 +5,7 @@
 #include "gkut2early.h"
 #include "gkut2late.h"
 #include "gkut2flow.h"
-#include "gkut2b64.h"
+#include "gkut2util.h"
 
 #include "geliboot.h"
 
@@ -20,26 +20,23 @@
 static void pause_and_exit(EFI_STATUS status);
 
 
-static void gkut2_set_env_vars(GKUT2_READ_NECESSARY_RESULT *res, GKUT2B_GELI_KEY *geli_key) {
+static EFI_STATUS gkut2_set_env_vars(GKUT2B_SALT *salt, GKUT2B_GELI_KEY *geli_key) {
     UINT8 nonce[NONCE_SIZE];
-    UINT8 nonce_b64[NONCE_SIZE * 2 + 1];
-    UINT64 nonce_b64_size;
-    UINT8 buffer[sizeof(res->salt.buffer) + sizeof(geli_key->buffer)];
+    UINT8 nonce_hex[NONCE_SIZE * 2 + 1];
+    UINT8 buffer[sizeof(salt->buffer) + sizeof(geli_key->buffer)];
     UINT8 digest[SHA256_DIGEST_SIZE];
     UINT8 buffer2[SHA256_DIGEST_SIZE + NONCE_SIZE];
-    UINT8 digest_b64[SHA256_DIGEST_SIZE * 2 + 1];
-    UINT64 digest_b64_len;
+    UINT8 digest_hex[SHA256_DIGEST_SIZE * 2 + 1];
 
     srandom(time(NULL));
     for (int i = 0; i < NONCE_SIZE; i++) {
         nonce[i] = random();
     }
-    gkut2_base64_encode(&nonce[0], NONCE_SIZE, &nonce_b64[0], &nonce_b64_size);
-    nonce_b64[nonce_b64_size] = 0;
+    gkut2_bin2hex(&nonce[0], NONCE_SIZE, &nonce_hex[0]);
 
-    memcpy(&buffer[0], &res->salt.buffer[0], res->salt.size);
-    memcpy(&buffer[res->salt.size], &geli_key->buffer[0], geli_key->size);
-    gkut2_sha256(&buffer[0], res->salt.size + geli_key->size, &digest[0]);
+    memcpy(&buffer[0], &salt->buffer[0], salt->size);
+    memcpy(&buffer[salt->size], &geli_key->buffer[0], geli_key->size);
+    gkut2_sha256(&buffer[0], salt->size + geli_key->size, &digest[0]);
     explicit_bzero(&buffer[0], sizeof(buffer));
 
     memcpy(&buffer2[0], &digest[0], SHA256_DIGEST_SIZE);
@@ -47,13 +44,14 @@ static void gkut2_set_env_vars(GKUT2_READ_NECESSARY_RESULT *res, GKUT2B_GELI_KEY
     gkut2_sha256(&buffer2[0], SHA256_DIGEST_SIZE + NONCE_SIZE, &digest[0]);
     explicit_bzero(&buffer2[0], sizeof(buffer2));
 
-    gkut2_base64_encode(&digest[0], SHA256_DIGEST_SIZE, &digest_b64[0], &digest_b64_len);
-    digest_b64[digest_b64_len] = 0;
+    gkut2_bin2hex(&digest[0], SHA256_DIGEST_SIZE, &digest_hex[0]);
 
-    setenv("kern.geom.eli.kut2.nonce", nonce_b64, 1);
-    setenv("kern.geom.eli.kut2.digest", digest_b64, 1);
+    setenv("kern.geom.eli.kut2.nonce", nonce_hex, 1);
+    setenv("kern.geom.eli.kut2.digest", digest_hex, 1);
     setenv("autoboot_delay", "-1", 1);
     setenv("beastie_disable", "YES", 1);
+
+    return EFI_SUCCESS;
 }
 
 
@@ -67,10 +65,9 @@ EFI_STATUS gkut2_early(GKUT2_STATE *state) {
         return status;
     }
 
-    GKUT2B_GELI_KEY geli_key;
-    UINT64 size = sizeof(geli_key.buffer);
-    status = gkut2_decrypt_key(&res, &geli_key.buffer[0], &size);
-    geli_key.size = size;
+    UINT64 size = sizeof(state->geli_key.buffer);
+    status = gkut2_decrypt_key(&res, &state->geli_key.buffer[0], &size);
+    state->geli_key.size = size;
     if (EFI_ERROR(status)) {
         printf("gkut2_early - gkut2_decrypt_key - %lu\n", status);
         goto Error;
@@ -78,21 +75,15 @@ EFI_STATUS gkut2_early(GKUT2_STATE *state) {
 
     state->KeyWasDecrypted = 1;
 
-    status = gkut2_check_passphrase_marker(&res.salt, &geli_key);
-    if (EFI_ERROR(status)) {
-        printf("gkut2_early - gkut2_check_passphrase_marker - %lu\n", status);
-        goto Error;
-    }
+    memcpy(&state->salt.buffer[0], &res.salt.buffer[0], res.salt.size);
+    state->salt.size = res.salt.size;
 
-    gkut2_set_env_vars(&res, &geli_key);
-
-    geli_add_key(&geli_key.buffer[0]);
-    explicit_bzero(&geli_key.buffer[0], geli_key.size);
+    geli_add_key(&state->geli_key.buffer[0]);
 
     return EFI_SUCCESS;
 
 Error:
-    explicit_bzero(&geli_key.buffer[0], geli_key.size);
+    explicit_bzero(&state->geli_key.buffer[0], sizeof(state->geli_key.buffer));
 
     return status;
 }
@@ -101,6 +92,22 @@ Error:
 void gkut2_late(GKUT2_STATE *state) {
     EFI_STATUS status;
 
+    if (state->KeyWasDecrypted) {
+        status = gkut2_check_passphrase_marker(&state->salt, &state->geli_key);
+        if (EFI_ERROR(status)) {
+            printf("gkut2_late - gkut2_check_passphrase_marker - %lu\n", status);
+            goto Error;
+        }
+
+        status = gkut2_set_env_vars(&state->salt, &state->geli_key);
+        if (EFI_ERROR(status)) {
+            printf("gkut2_late - gkut2_set_env_vars - %lu\n", status);
+            goto Error;
+        }
+
+        explicit_bzero(&state->geli_key.buffer[0], sizeof(state->geli_key.buffer));
+    }
+
     status = gkut2_pcr_extend();
     if (EFI_ERROR(status)) {
         printf("gkut2_late - gkut2_pcr_extend - %lu\n", status);
@@ -108,6 +115,12 @@ void gkut2_late(GKUT2_STATE *state) {
             pause_and_exit(status);
         }
     }
+
+    return;
+
+Error:
+    explicit_bzero(&state->geli_key.buffer[0], sizeof(state->geli_key.buffer));
+    pause_and_exit(status);
 }
 
 

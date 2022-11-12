@@ -16,3 +16,4 @@
 {"type": "FINISH", "timestamp": "2022-11-11T17:49:08.670270", "taskId": 8}
 {"type": "ADD", "timestamp": "2022-11-11T19:04:00.777032", "description": "GELI key needs to take GELI metadata salt into account", "taskId": 10}
 {"type": "ADD", "timestamp": "2022-11-11T20:50:24.175102", "description": "Move GELI key HMAC compute into stand", "taskId": 11}
+{"type": "ADD", "timestamp": "2022-11-11T21:16:35.075838", "description": "Use EFI_RNG_PROTOCOL instead of random()", "taskId": 12}

@@ -4,12 +4,15 @@
 #include <crypto/sha2/sha256.h>
 #include <stdio.h>
 
+EFI_STATUS DummyLocateProtocol(EFI_GUID *guid, void*, void **Result); // mock_locate_protocol.c
+
 void DummyExit(void*, int, int, void*) {
     printf("BS->Exit() called.\n");
 }
 
 EFI_BOOT_SERVICES BS_ = {
-    .Exit = DummyExit
+    .Exit = DummyExit,
+    .LocateProtocol = DummyLocateProtocol
 };
 
 EFI_BOOT_SERVICES *BS = &BS_;

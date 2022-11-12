@@ -20,19 +20,12 @@ EFI_STATUS DummyTpm2SubmitCommand(EFI_TCG2_PROTOCOL*, UINT32 InSize, UINT8 *InBu
     }
 }
 
-EFI_TCG2_PROTOCOL DummyTcgProtocol = {
+EFI_TCG2_PROTOCOL DummyTcgProtocol_ = {
     .SubmitCommand = DummyTpm2SubmitCommand
 };
 
-EFI_STATUS DummyLocateProtocol(EFI_GUID*, void*, void **Result) {
-    *Result = &DummyTcgProtocol;
-    return EFI_SUCCESS;
-}
-
-extern EFI_BOOT_SERVICES *BS;
+extern EFI_TCG2_PROTOCOL *DummyTcgProtocol;
 
 void mock_tpm2_api_init() {
-    BS->LocateProtocol = DummyLocateProtocol;
+    DummyTcgProtocol = &DummyTcgProtocol_;
 }
-
-void *IH;

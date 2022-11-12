@@ -1,4 +1,5 @@
 #include <efi.h>
+#include <efirng.h>
 
 #include <stdio.h>
 
@@ -44,6 +45,27 @@ EFI_STATUS gkut2_hex2bin(UINT8 *hex, UINT8 *bin, UINT64 *bin_len) {
         bin++;
         hex += 2;
         *bin_len += 1;
+    }
+
+    return EFI_SUCCESS;
+}
+
+
+EFI_STATUS gkut2_random_bytes(UINT8 *output, UINTN length) {
+    EFI_GUID guid = EFI_RNG_PROTOCOL_GUID;
+    EFI_RNG_PROTOCOL *protocol;
+    EFI_STATUS status;
+
+    status = BS->LocateProtocol(&guid, NULL, (void**) &protocol);
+    if (EFI_ERROR(status)) {
+        printf("gkut2_random_bytes - LocateProtocol - 0x%lX\n", status);
+        return status;
+    }
+
+    status = protocol->GetRNG(protocol, NULL, length, output);
+    if (EFI_ERROR(status)) {
+        printf("gkut2_random_bytes - GetRNG - 0x%lX\n", status);
+        return status;
     }
 
     return EFI_SUCCESS;

@@ -65,6 +65,7 @@ extern void *IH;
 #define IN
 #define OUT
 #define INOUT
+#define OPTIONAL
 
 #define EFIAPI
 

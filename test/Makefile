@@ -15,7 +15,9 @@ test_encrypt_decrypt: test_encrypt_decrypt.c \
     mock_tpm2_api.c \
     mock_tpm2_impl.c \
     mock_simplefs.c \
-    mock_bs.c
+    mock_bs.c \
+    mock_locate_protocol.c \
+    mock_rng.c
 	gcc $(CFLAGS) test_encrypt_decrypt.c \
 		../stand/efi/loader/gkut2dec.c \
         ../stand/efi/loader/gkut2tcg.c \
@@ -24,17 +26,24 @@ test_encrypt_decrypt: test_encrypt_decrypt.c \
         mock_tpm2_impl.c \
         mock_simplefs.c \
         mock_bs.c \
+        mock_locate_protocol.c \
+        mock_rng.c \
         -o test_encrypt_decrypt \
         -ltss2-tcti-swtpm
 
 test_simplefs: test_simplefs.c \
     mock_simplefs.c \
     ../stand/efi/loader/gkut2fs.c \
-    mock_bs.c
+    mock_bs.c \
+    mock_locate_protocol.c \
+    mock_rng.c \
+    mock_tpm2_api.c
 	gcc $(CFLAGS) test_simplefs.c \
         mock_simplefs.c \
         ../stand/efi/loader/gkut2fs.c \
         mock_bs.c \
+        mock_locate_protocol.c \
+        mock_rng.c \
         -o test_simplefs
 
 test_ext_public: test_ext_public.c \
@@ -43,7 +52,9 @@ test_ext_public: test_ext_public.c \
     ../stand/efi/loader/gkut2auth.c \
     mock_tpm2_api.c \
     mock_tpm2_impl.c \
-    mock_bs.c
+    mock_bs.c \
+    mock_locate_protocol.c \
+    mock_rng.c
 	gcc $(CFLAGS) test_ext_public.c \
 		../stand/efi/loader/gkut2dec.c \
         ../stand/efi/loader/gkut2tcg.c \
@@ -51,6 +62,8 @@ test_ext_public: test_ext_public.c \
         mock_tpm2_api.c \
         mock_tpm2_impl.c \
         mock_bs.c \
+        mock_locate_protocol.c \
+        mock_rng.c \
         -o test_ext_public \
         -ltss2-tcti-swtpm
 
@@ -62,6 +75,8 @@ test_early: test_early.c \
     ../stand/efi/loader/gkut2tcg.c \
     ../stand/efi/loader/gkut2dec.c \
     mock_bs.c \
+    mock_locate_protocol.c \
+    mock_rng.c \
     mock_simplefs.c \
     mock_tpm2_api.c \
     mock_tpm2_impl.c
@@ -73,6 +88,8 @@ test_early: test_early.c \
         ../stand/efi/loader/gkut2tcg.c \
         ../stand/efi/loader/gkut2dec.c \
         mock_bs.c \
+        mock_locate_protocol.c \
+        mock_rng.c \
         mock_simplefs.c \
         mock_tpm2_api.c \
 	mock_tpm2_impl.c \
@@ -94,7 +111,9 @@ test_flow: test_flow.c \
     mock_simplefs.c \
     mock_tpm2_api.c \
     mock_tpm2_impl.c \
-    mock_geli.c
+    mock_geli.c \
+    mock_locate_protocol.c \
+    mock_rng.c
 	gcc $(CFLAGS) test_flow.c \
         ../stand/efi/loader/gkut2early.c \
         ../stand/efi/loader/gkut2fs.c \
@@ -111,13 +130,21 @@ test_flow: test_flow.c \
         mock_tpm2_api.c \
 	mock_tpm2_impl.c \
 	mock_geli.c \
+	mock_locate_protocol.c \
+	mock_rng.c \
         -o test_flow \
         -ltss2-tcti-swtpm
 
 test_util: test_util.c \
-    ../stand/efi/loader/gkut2util.c
+    ../stand/efi/loader/gkut2util.c \
+    mock_bs.c \
+    mock_locate_protocol.c \
+    mock_rng.c
 	gcc $(CFLAGS) test_util.c \
 	../stand/efi/loader/gkut2util.c \
+	mock_bs.c \
+	mock_locate_protocol.c \
+	mock_rng.c \
 	-o test_util
 
 test_context_load: test_context_load.c

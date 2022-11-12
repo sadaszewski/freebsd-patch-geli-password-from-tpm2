@@ -18,6 +18,7 @@ def create_parser():
     parser.add_argument('--vm-pool-name', type=str, default='zroot')
     parser.add_argument('--alt-pool-name', type=str, default='altzroot')
     parser.add_argument('--alt-root', type=str, default='/tmp/altroot')
+    parser.add_argument('--keyno', type=int, default=0)
     return parser
 
 
@@ -41,6 +42,7 @@ def main():
         with open(os.path.join(d, 'passfile'), 'w') as f:
             f.write(args.vm_geli_passphrase)
         subprocess.check_output([ 'geli', 'attach',
+            '-n', str(args.keyno),
             '-j', os.path.join(d, 'passfile'),
             f'/dev/md{args.md_unit}p{args.zfs_partition_number}' ])
         es.callback(lambda: print('geli detach') or \

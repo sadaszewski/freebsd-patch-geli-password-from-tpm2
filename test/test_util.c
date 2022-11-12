@@ -52,8 +52,34 @@ void test_03_hex2bin_bad_char() {
     printf("Success!\n");
 }
 
+void test_04_random_bytes() {
+    printf("====== test_04_random_bytes() ======\n");
+    UINT8 buf[1024];
+    EFI_STATUS status;
+    memset(&buf[0], 0, sizeof(buf));
+    for (int i = 0; i < 1024; i++) {
+        assert(buf[i] == 0);
+    }
+    status = gkut2_random_bytes(&buf[0], 1024);
+    assert(status == EFI_SUCCESS);
+    printf("buf: ");
+    for (int i = 0; i < 64; i++) {
+        printf("%02x ", buf[i]);
+    }
+    printf("... ");
+    for (int i = 1024 - 64; i < 1024; i++) {
+        printf("%02x ", buf[i]);
+    }
+    printf("\n");
+    printf("Success!\n");
+}
+
+void mock_rng_init();
+
 int main() {
+    mock_rng_init();
     test_01_bin2hex();
     test_02_hex2bin();
     test_03_hex2bin_bad_char();
+    test_04_random_bytes();
 }

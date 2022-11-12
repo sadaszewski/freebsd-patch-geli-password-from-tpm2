@@ -37,5 +37,8 @@ EFI_RNG_PROTOCOL DummyRngProtocol_ = {
 extern EFI_RNG_PROTOCOL *DummyRngProtocol;
 
 void mock_rng_init() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    srandom(tv.tv_sec + tv.tv_usec);
     DummyRngProtocol = &DummyRngProtocol_;
 }

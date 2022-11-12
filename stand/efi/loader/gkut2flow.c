@@ -28,10 +28,7 @@ static EFI_STATUS gkut2_set_env_vars(GKUT2B_SALT *salt, GKUT2B_GELI_KEY *geli_ke
     UINT8 buffer2[SHA256_DIGEST_SIZE + NONCE_SIZE];
     UINT8 digest_hex[SHA256_DIGEST_SIZE * 2 + 1];
 
-    srandom(time(NULL));
-    for (int i = 0; i < NONCE_SIZE; i++) {
-        nonce[i] = random();
-    }
+    gkut2_random_bytes(&nonce[0], NONCE_SIZE);
     gkut2_bin2hex(&nonce[0], NONCE_SIZE, &nonce_hex[0]);
 
     memcpy(&buffer[0], &salt->buffer[0], salt->size);

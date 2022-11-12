@@ -1,7 +1,9 @@
 #include <efi.h>
+#include <efilib.h>
 #include <efirng.h>
 
 #include <stdio.h>
+
 
 EFI_STATUS gkut2_bin2hex(UINT8 *bin, UINT64 bin_len, UINT8 *hex) {
     if (bin == NULL || hex == NULL) {
@@ -15,6 +17,7 @@ EFI_STATUS gkut2_bin2hex(UINT8 *bin, UINT64 bin_len, UINT8 *hex) {
 
     return EFI_SUCCESS;
 }
+
 
 EFI_STATUS gkut2_hex2bin(UINT8 *hex, UINT8 *bin, UINT64 *bin_len) {
     if (hex == NULL || bin == NULL || bin_len == NULL) {
@@ -51,6 +54,33 @@ EFI_STATUS gkut2_hex2bin(UINT8 *hex, UINT8 *bin, UINT64 *bin_len) {
 }
 
 
+extern EFI_RUNTIME_SERVICES *RS;
+
+time_t from_efi_time(EFI_TIME *ETime);
+
+EFI_STATUS gkut2_random_bytes_fallback(UINT8 *output, UINTN length) {
+    EFI_TIME EfiTime;
+	EFI_TIME_CAPABILITIES Capabilities;
+	EFI_STATUS Status;
+
+	Status = RS->GetTime(&EfiTime, &Capabilities);
+    if (EFI_ERROR(Status)) {
+        printf("gkut2_random_bytes_fallback - GetTime - 0x%lX\n", Status);
+        return Status;
+    }
+
+    time_t t = from_efi_time(&EfiTime);
+    printf("t: %ld\n", t);
+
+    srandom(t);
+    for (UINTN i = 0; i < length; i++) {
+        output[i] = random();
+    }
+
+    return EFI_SUCCESS;
+}
+
+
 EFI_STATUS gkut2_random_bytes(UINT8 *output, UINTN length) {
     EFI_GUID guid = EFI_RNG_PROTOCOL_GUID;
     EFI_RNG_PROTOCOL *protocol;
@@ -59,7 +89,8 @@ EFI_STATUS gkut2_random_bytes(UINT8 *output, UINTN length) {
     status = BS->LocateProtocol(&guid, NULL, (void**) &protocol);
     if (EFI_ERROR(status)) {
         printf("gkut2_random_bytes - LocateProtocol - 0x%lX\n", status);
-        return status;
+        printf("Using fallback!\n");
+        return gkut2_random_bytes_fallback(output, length);
     }
 
     status = protocol->GetRNG(protocol, NULL, length, output);

@@ -71,5 +71,36 @@ extern void *IH;
 
 void efi_exit(EFI_STATUS);
 
+typedef struct {
+    UINT16      Year;       // 1998 - 20XX
+    UINT8       Month;      // 1 - 12
+    UINT8       Day;        // 1 - 31
+    UINT8       Hour;       // 0 - 23
+    UINT8       Minute;     // 0 - 59
+    UINT8       Second;     // 0 - 59
+    UINT8       Pad1;
+    UINT32      Nanosecond; // 0 - 999,999,999
+    INT16       TimeZone;   // -1440 to 1440 or 2047
+    UINT8       Daylight;
+    UINT8       Pad2;
+} EFI_TIME;
+
+typedef struct {
+        UINT32                      Resolution;     // 1e-6 parts per million
+        UINT32                      Accuracy;       // hertz
+        BOOLEAN                     SetsToZero;     // Set clears sub-second time
+} EFI_TIME_CAPABILITIES;
+
+typedef
+EFI_STATUS
+(EFIAPI *EFI_GET_TIME) (
+    OUT EFI_TIME                    *Time,
+    OUT EFI_TIME_CAPABILITIES       *Capabilities OPTIONAL
+    );
+
+typedef struct {
+    EFI_GET_TIME GetTime;
+} EFI_RUNTIME_SERVICES;
+
 #endif
 

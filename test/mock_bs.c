@@ -40,3 +40,19 @@ int SHA256_Final(UINT8*, SHA256_CTX*) {
     printf("SHA256_Final - mock implementation does nothing\n");
     return 0;
 }
+
+EFI_STATUS DummyGetTime(EFI_TIME *Time, EFI_TIME_CAPABILITIES *Capabilities) {
+    printf("RS->GetTime - mock implementation does nothing\n");
+    return EFI_UNSUPPORTED;
+}
+
+EFI_RUNTIME_SERVICES RS_ = {
+    .GetTime = DummyGetTime
+};
+
+EFI_RUNTIME_SERVICES *RS = &RS_;
+
+time_t from_efi_time(EFI_TIME *ETime) {
+    printf("from_efi_time - mock implementation does nothing\n");
+    return 0;
+}

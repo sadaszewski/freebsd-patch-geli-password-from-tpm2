@@ -56,3 +56,8 @@ time_t from_efi_time(EFI_TIME *ETime) {
     printf("from_efi_time - mock implementation does nothing\n");
     return 0;
 }
+
+EFI_STATUS gkut2_request_memory_overwrite() {
+    printf("gkut2_request_memory_overwrite - mock implementation does nothing\n");
+    return EFI_SUCCESS;
+}

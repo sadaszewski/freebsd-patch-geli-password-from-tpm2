@@ -40,9 +40,13 @@ def patch_stand_makefile(args):
         'SRCS += gkut2pcr.c',
         'SRCS += gkut2tcg.c',
         'SRCS += gkut2util.c',
+        'SRCS += gkut2morc.c',
         'CFLAGS += -DLOADER_GKUT2',
         '.ifdef LOADER_GKUT2_PCRHANDLE',
         'CFLAGS += -DLOADER_GKUT2_PCRHANDLE=\\"${LOADER_GKUT2_PCRHANDLE}\\"',
+        '.endif',
+        '.ifdef LOADER_GKUT2_IGNORE_MORC_ERROR',
+        'CFLAGS += -DLOADER_GKUT2_IGNORE_MORC_ERROR',
         '.endif',
         '.endif',
     ] + lines[i+1:]

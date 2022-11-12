@@ -6,6 +6,7 @@
 #include "gkut2late.h"
 #include "gkut2flow.h"
 #include "gkut2util.h"
+#include "gkut2morc.h"
 
 #include "geliboot.h"
 
@@ -62,6 +63,16 @@ EFI_STATUS gkut2_early(GKUT2_STATE *state) {
     EFI_STATUS status;
     struct hmac_ctx hmac;
     UINT8 key[G_ELI_USERKEYLEN];
+
+    status = gkut2_request_memory_overwrite();
+    if (EFI_ERROR(status)) {
+        printf("gkut2_early - gkut2_request_memory_overwrite - 0x%lX\n", status);
+#ifdef LOADER_GKUT2_IGNORE_MORC_ERROR
+        printf("Warning! Memory Overwrite Request Control variable is BROKEN!!!\n");
+#else
+        return status;
+#endif
+    }
 
     status = gkut2_read_necessary(&res);
     if (EFI_ERROR(status)) {

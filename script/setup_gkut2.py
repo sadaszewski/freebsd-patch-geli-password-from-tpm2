@@ -5,7 +5,6 @@ import os
 import random
 import tempfile
 import hashlib
-import hmac
 import base64
 import shutil
 from argparse import ArgumentParser
@@ -32,27 +31,6 @@ def detect_geom():
     return geom
 
 
-def get_geli_salt(geom):
-    info = subprocess.check_output(['diskinfo', geom]).decode().split()
-    sector_size = int(info[1])
-    num_sectors = int(info[3])
-    with open(f'/dev/{geom}', 'rb') as f:
-        f.seek((num_sectors - 1) * sector_size)
-        meta = f.read(sector_size)
-    ofs = 16 + 4 + 4 + 2 + 2 + 2 + 8 + 4 + 1 + 4
-    G_ELI_SALTLEN = 64
-    # print(meta[:16])
-    assert meta[:16] == b'GEOM::ELI\x00\x00\x00\x00\x00\x00\x00'
-    salt = meta[ofs:ofs+G_ELI_SALTLEN]
-    return salt
-
-
-def geli_hmac(key):
-    h = hmac.new(b'', digestmod='sha512')
-    h.update(key)
-    return h.digest()
-
-
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -64,7 +42,6 @@ def main():
 
     print('Generating GELI key...')
     newkey = random.getrandbits(args.geli_key_nbits).to_bytes(args.geli_key_nbits // 8, 'little')
-    newkeyhmac = geli_hmac(newkey)
 
     print('Generating salt, TPM2 owner password, primary key auth value...')
     newsalt, newownerpass, symauthvalue = [ random.getrandbits(args.nbits).to_bytes(args.nbits // 8, 'little') \
@@ -86,7 +63,7 @@ def main():
         os.chmod(d, 0o700)
 
         for fnam, data in { '.newkey': newkey, '.newownerpass': newownerpass,
-            '.symauthvalue': symauthvalue, '.newkeyhmac': newkeyhmac }.items():
+            '.symauthvalue': symauthvalue }.items():
             with open(os.path.join(d, fnam), 'wb') as f:
                 f.write(data)
 
@@ -161,15 +138,11 @@ def main():
             '-p', 'file:' + os.path.join(d, '.symauthvalue'),
             '-t', os.path.join(args.efi_target_dir, 'iv'),
             '-o', os.path.join(args.efi_target_dir, 'geli_key.enc'),
-            os.path.join(d, '.newkeyhmac') ])
+            os.path.join(d, '.newkey') ])
 
         with open(os.path.join(d, '.newkey'), 'ab') as f:
             f.seek(0)
             f.write(b'\x00' * len(newkey))
-        
-        with open(os.path.join(d, '.newkeyhmac'), 'ab') as f:
-            f.seek(0)
-            f.write(b'\x00' * len(newkeyhmac))
 
         if not args.no_geli:
             print('Modifying GELI passphrase...')

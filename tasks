@@ -18,3 +18,7 @@
 {"type": "ADD", "timestamp": "2022-11-11T20:50:24.175102", "description": "Move GELI key HMAC compute into stand", "taskId": 11}
 {"type": "ADD", "timestamp": "2022-11-11T21:16:35.075838", "description": "Use EFI_RNG_PROTOCOL instead of random()", "taskId": 12}
 {"type": "FINISH", "timestamp": "2022-11-12T09:17:07.022675", "taskId": 12}
+{"type": "ADD", "timestamp": "2022-11-12T18:42:21.543973", "description": "Put random bytes in session nonces", "taskId": 13}
+{"type": "ADD", "timestamp": "2022-11-12T19:43:52.738603", "description": "Use platform reset attack mitigation", "taskId": 14}
+{"type": "CANCEL", "timestamp": "2022-11-12T20:59:58.238522", "taskId": 10}
+{"type": "FINISH", "timestamp": "2022-11-12T21:00:01.880584", "taskId": 11}

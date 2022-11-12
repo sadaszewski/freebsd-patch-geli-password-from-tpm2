@@ -51,6 +51,26 @@ def patch_stand_makefile(args):
         f.write('\n'.join(lines))
 
 
+def patch_stand_efi_main(args):
+    fname = os.path.join(args.target_dir, 'stand', 'efi', 'loader', 'efi_main.c')
+
+    with open(fname) as f:
+        lines = f.read().split('\n')
+
+    for i in range(len(lines) - 1, -1, -1):
+        if lines[i].strip().startswith('BS->FreePages(heap'):
+            break
+    else:
+        raise RuntimeError('Could not find BS->FreePages(heap, ...) in stand/efi/loader/efi_main.c')
+
+    lines = lines[:i] + [
+        '\texplicit_bzero((void*)(uintptr_t)heap, heapsize);'
+    ] + lines[i:]
+
+    with open(fname, 'w') as f:
+        f.write('\n'.join(lines))
+
+
 def patch_stand_main(args):
     fname = os.path.join(args.target_dir, 'stand', 'efi', 'loader', 'main.c')
 
@@ -247,6 +267,7 @@ def main():
 
     shutil.copytree('stand', os.path.join(args.target_dir, 'stand'), dirs_exist_ok=True)
     patch_stand_makefile(args)
+    patch_stand_efi_main(args)
     patch_stand_main(args)
     patch_stand_interp(args)
 

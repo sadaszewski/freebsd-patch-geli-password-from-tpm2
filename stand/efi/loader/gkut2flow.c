@@ -55,6 +55,8 @@ static EFI_STATUS gkut2_set_env_vars(GKUT2B_SALT *salt, GKUT2B_GELI_KEY *geli_ke
 EFI_STATUS gkut2_early(GKUT2_STATE *state) {
     GKUT2_READ_NECESSARY_RESULT res;
     EFI_STATUS status;
+    struct hmac_ctx hmac;
+    UINT8 key[G_ELI_USERKEYLEN];
 
     status = gkut2_read_necessary(&res);
     if (EFI_ERROR(status)) {
@@ -75,11 +77,16 @@ EFI_STATUS gkut2_early(GKUT2_STATE *state) {
     memcpy(&state->salt.buffer[0], &res.salt.buffer[0], res.salt.size);
     state->salt.size = res.salt.size;
 
-    geli_add_key(&state->geli_key.buffer[0]);
+    g_eli_crypto_hmac_init(&hmac, NULL, 0);
+    g_eli_crypto_hmac_update(&hmac, &state->geli_key.buffer[0], state->geli_key.size);
+    g_eli_crypto_hmac_final(&hmac, &key[0], 0);
+    geli_add_key(&key[0]);
+    explicit_bzero(&key[0], sizeof(key));
 
     return EFI_SUCCESS;
 
 Error:
+    explicit_bzero(&key[0], sizeof(key));
     explicit_bzero(&state->geli_key.buffer[0], sizeof(state->geli_key.buffer));
 
     return status;

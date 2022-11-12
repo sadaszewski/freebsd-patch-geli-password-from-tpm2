@@ -30,4 +30,25 @@ struct keybuf {
 void geli_add_key(geli_ukey key);
 void geli_import_key_buffer(struct keybuf *keybuf);
 
+#define SHA512_BLOCK_LENGTH		128
+#define SHA512_DIGEST_LENGTH		64
+#define SHA512_DIGEST_STRING_LENGTH	(SHA512_DIGEST_LENGTH * 2 + 1)
+
+typedef struct SHA512Context {
+	UINT64 state[8];
+	UINT64 count[2];
+	UINT8 buf[SHA512_BLOCK_LENGTH];
+} SHA512_CTX;
+
+struct hmac_ctx {
+	SHA512_CTX	innerctx;
+	SHA512_CTX	outerctx;
+};
+
+void g_eli_crypto_hmac_init(struct hmac_ctx *ctx, const UINT8 *hkey,
+    UINTN hkeylen);
+void g_eli_crypto_hmac_update(struct hmac_ctx *ctx, const UINT8 *data,
+    UINTN datasize);
+void g_eli_crypto_hmac_final(struct hmac_ctx *ctx, UINT8 *md, UINTN mdsize);
+
 #endif

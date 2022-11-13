@@ -22,3 +22,6 @@
 {"type": "ADD", "timestamp": "2022-11-12T19:43:52.738603", "description": "Use platform reset attack mitigation", "taskId": 14}
 {"type": "CANCEL", "timestamp": "2022-11-12T20:59:58.238522", "taskId": 10}
 {"type": "FINISH", "timestamp": "2022-11-12T21:00:01.880584", "taskId": 11}
+{"type": "FINISH", "timestamp": "2022-11-12T21:59:47.365850", "taskId": 14}
+{"type": "ADD", "timestamp": "2022-11-13T07:26:38.718868", "description": "Use openssl rand instead of getrandbits()", "taskId": 15}
+{"type": "FINISH", "timestamp": "2022-11-13T10:01:02.215794", "taskId": 13}

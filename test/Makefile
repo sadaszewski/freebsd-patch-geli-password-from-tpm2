@@ -74,6 +74,7 @@ test_early: test_early.c \
     ../stand/efi/loader/gkut2auth.c \
     ../stand/efi/loader/gkut2tcg.c \
     ../stand/efi/loader/gkut2dec.c \
+    ../stand/efi/loader/gkut2util.c \
     mock_bs.c \
     mock_locate_protocol.c \
     mock_rng.c \
@@ -87,6 +88,7 @@ test_early: test_early.c \
         ../stand/efi/loader/gkut2auth.c \
         ../stand/efi/loader/gkut2tcg.c \
         ../stand/efi/loader/gkut2dec.c \
+        ../stand/efi/loader/gkut2util.c \
         mock_bs.c \
         mock_locate_protocol.c \
         mock_rng.c \

@@ -3,6 +3,7 @@
 #include "gkut2early.h"
 #include "gkut2parse.h"
 #include "gkut2auth.h"
+#include "gkut2util.h"
 
 #include <stdio.h>
 
@@ -92,10 +93,17 @@ EFI_STATUS gkut2_read_necessary(GKUT2_READ_NECESSARY_RESULT *res) {
 EFI_STATUS gkut2_start_hmac_session(TPMI_SH_AUTH_SESSION *SessionHandle) {
 	EFI_STATUS status;
 
-	TPM2B_DIGEST NonceCaller = { 16 };
-	TPM2B_ENCRYPTED_SECRET Salt = { 0 };
+	TPM2B_DIGEST NonceCaller = { .size = 16 };
+	TPM2B_ENCRYPTED_SECRET Salt = { .size = 0 };
 	TPMT_SYM_DEF Symmetric = { TPM_ALG_NULL };
 	TPM2B_NONCE NonceTPM;
+
+    status = gkut2_random_bytes(&NonceCaller.buffer[0], NonceCaller.size);
+    if (EFI_ERROR(status)) {
+        printf("gkut2_start_hmac_session - gkut2_random_bytes - 0x%lX\n", status);
+        return status;
+    }
+
 	status = Tpm2StartAuthSession (
 	    TPM_RH_NULL,	// TpmKey
 	    TPM_RH_NULL,	// Bind
@@ -118,10 +126,17 @@ EFI_STATUS gkut2_start_hmac_session(TPMI_SH_AUTH_SESSION *SessionHandle) {
 EFI_STATUS gkut2_start_policy_session(TPMI_SH_AUTH_SESSION *SessionHandle, TPMS_PCR_SELECTION *pcr_selection) {
 	EFI_STATUS status;
 
-	TPM2B_DIGEST NonceCaller = { 16 };
-	TPM2B_ENCRYPTED_SECRET Salt = { 0 };
+	TPM2B_DIGEST NonceCaller = { .size = 16 };
+	TPM2B_ENCRYPTED_SECRET Salt = { .size = 0 };
 	TPMT_SYM_DEF Symmetric = { TPM_ALG_NULL };
 	TPM2B_NONCE NonceTPM;
+
+    status = gkut2_random_bytes(&NonceCaller.buffer[0], NonceCaller.size);
+    if (EFI_ERROR(status)) {
+        printf("gkut2_start_policy_session - gkut2_random_bytes - 0x%lX\n");
+        return status;
+    }
+
 	status = Tpm2StartAuthSession (
 	    TPM_RH_NULL,	// TpmKey
 	    TPM_RH_NULL,	// Bind

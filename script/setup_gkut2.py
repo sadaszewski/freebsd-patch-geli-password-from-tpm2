@@ -31,6 +31,11 @@ def detect_geom():
     return geom
 
 
+def random_bytes(n):
+    res = subprocess.check_output(['openssl', 'rand', str(n)])
+    return res
+
+
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -41,14 +46,14 @@ def main():
     print('ELI geom:', geom)
 
     print('Generating GELI key...')
-    newkey = random.getrandbits(args.geli_key_nbits).to_bytes(args.geli_key_nbits // 8, 'little')
+    newkey = random_bytes(args.geli_key_nbits // 8)
 
     print('Generating salt, TPM2 owner password, primary key auth value...')
-    newsalt, newownerpass, symauthvalue = [ random.getrandbits(args.nbits).to_bytes(args.nbits // 8, 'little') \
+    newsalt, newownerpass, symauthvalue = [ random_bytes(args.nbits // 8) \
         for _ in range(3) ]
 
     print('Generating IV...')
-    iv = random.getrandbits(args.iv_nbits).to_bytes(args.iv_nbits // 8, 'little')
+    iv = random_bytes(args.iv_nbits // 8)
 
     with open(os.path.join(args.efi_target_dir, 'salt'), 'wb') as f:
         f.write(newsalt)

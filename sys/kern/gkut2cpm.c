@@ -29,10 +29,10 @@
 
 extern bool dynamic_kenv;
 
-static char g_passphrase_buf[KENV_MVALLEN + 1];
-static char *g_passphrase;
-static char g_salt_buf[KENV_MVALLEN + 1];
-static char *g_salt;
+static uint8_t g_nonce_buf[KENV_MVALLEN];
+static uint64_t g_nonce_len;
+static uint8_t g_digest_buf[KENV_MVALLEN];
+static uint64_t g_digest_len;
 static bool g_was_retrieved;
 
 
@@ -91,7 +91,8 @@ static void wipe_geli_keys() {
 
 
 static void wipe_secrets() {
-    explicit_bzero(&g_passphrase_buf[0], KENV_MVALLEN + 1);
+    explicit_bzero(&g_nonce_buf[0], KENV_MVALLEN + 1);
+	explicit_bzero(&g_digest_buf[0], KENV_MVALLEN + 1);
 }
 
 
@@ -114,15 +115,42 @@ static int mypanic(const char *msg) {
 }
 
 
-static void sha256_digest_make_human_readable(const unsigned char *digest, char *digest_human_readable) {
-	for (size_t i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-		snprintf(digest_human_readable + i * 2, 3, "%02x", digest[i]);
-	}
-	digest_human_readable[2 * SHA256_DIGEST_LENGTH] = '\0';
+static int hex2bin(const uint8_t *hex, uint8_t *bin, uint64_t *bin_len) {
+    if (hex == NULL || bin == NULL || bin_len == NULL) {
+        return (-1);
+    }
+
+    *bin_len = 0;
+    while (*hex) {
+        uint32_t val = 0;
+        for (int i = 0; i < 2; i++) {
+            uint8_t ch = hex[i];
+            if (ch == 0) {
+                return (-2);
+            }
+            if (ch >= 'a' && ch <= 'f') {
+                ch = 10 + (ch - 'a');
+            } else if (ch >= 'A' && ch <= 'F') {
+                ch = 10 + (ch - 'A');
+            } else if (ch >= '0' && ch <= '9') {
+                ch = ch - '0';
+            } else {
+                return (-1);
+            }
+            val <<= 4;
+            val |= ch;
+        }
+        *bin = val;
+        bin++;
+        hex += 2;
+        *bin_len += 1;
+    }
+
+    return 0;
 }
 
 
-static void tpm2_check_passphrase_marker(void *param) {
+static void gkut2_check_passphrase_marker(void *param) {
 	struct thread *td = curthread;
 
 	int error;
@@ -130,18 +158,13 @@ static void tpm2_check_passphrase_marker(void *param) {
 	int fd;
 	struct iovec aiov;
 	struct uio auio;
-	char buf[SHA256_DIGEST_LENGTH * 2 + 1];
+	char buf[SHA256_DIGEST_LENGTH];
 	unsigned char digest[SHA256_DIGEST_LENGTH];
-	char digest_human_readable[SHA256_DIGEST_LENGTH * 2 + 1];
 	SHA256_CTX ctx;
 
 	if (!g_was_retrieved) {
-		printf("Passphrase from TPM was not used - OK.\n");
+		printf("GKUT2 - GELI Key from TPM2 was not used - OK.\n");
 		return;
-	}
-
-	if (g_passphrase == NULL) {
-		mypanic("Passphrase was retrieved from the TPM but was not passed to us.\n");
 	}
 
 	error = kern_statat(td, 0, AT_FDCWD, "/.passphrase_marker", UIO_SYSSPACE, &sb, NULL);
@@ -153,7 +176,7 @@ static void tpm2_check_passphrase_marker(void *param) {
 		mypanic("Passphrase marker has wrong permissions set");
 	}
 
-	if (sb.st_size >= SHA256_DIGEST_LENGTH * 2 + 1) {
+	if (sb.st_size > SHA256_DIGEST_LENGTH) {
 		mypanic("Passphrase marker too long");
 	}
 
@@ -176,14 +199,11 @@ static void tpm2_check_passphrase_marker(void *param) {
 	buf[sb.st_size] = '\0';
 
 	SHA256_Init(&ctx);
-	if (g_salt != NULL) {
-		SHA256_Update(&ctx, g_salt, strlen(g_salt));
-	}
-	SHA256_Update(&ctx, g_passphrase, strlen(g_passphrase));
-	SHA256_Final(digest, &ctx);
-	sha256_digest_make_human_readable(digest, digest_human_readable);
+	SHA256_Update(&ctx, &buf[0], sb.st_size);
+	SHA256_Update(&ctx, &g_nonce_buf[0], g_nonce_len);
+	SHA256_Final(&digest[0], &ctx);
 
-	if (strncmp(buf, digest_human_readable, SHA256_DIGEST_LENGTH * 2 + 1) != 0) {
+	if (memcmp(&digest[0], &g_digest_buf[0], SHA256_DIGEST_LENGTH) != 0) {
 		mypanic("Passphrase marker does not match");
 	}
 
@@ -211,42 +231,50 @@ static void static_kenv_wipe(const char *name) {
 
 
 // This needs to happen before the dynamic kenv is initialized
-static void tpm2cpm_sanitize_kenv(void *param) {
-    const char *was_retrieved = kern_getenv("kern.geom.eli.passphrase.from_tpm2.was_retrieved");
-    const char *passphrase = kern_getenv("kern.geom.eli.passphrase.from_tpm2.passphrase");
-    const char *salt = kern_getenv("kern.geom.eli.passphrase.from_tpm2.salt");
+static void gkut2_sanitize_kenv(void *param) {
+    const char *nonce = kern_getenv("kern.geom.eli.kut2.nonce");
+    const char *digest = kern_getenv("kern.geom.eli.kut2.digest");
 
-    if (was_retrieved == NULL || was_retrieved[0] != '1') {
+	static_kenv_wipe("kern.geom.eli.kut2.nonce");
+	static_kenv_wipe("kern.geom.eli.kut2.digest");
+
+    if (nonce == NULL && digest == NULL) {
         g_was_retrieved = false;
+		return;
     } else {
         g_was_retrieved = true;
     }
 
-    if (passphrase) {
-        strncpy(&g_passphrase_buf[0], passphrase, KENV_MVALLEN);
-        g_passphrase = &g_passphrase_buf[0];
-    } else {
-        g_passphrase = NULL;
-    }
+    if (nonce == NULL) {
+		mypanic("GKUT2 retrieved the key but kern.geom.eli.kut2.nonce is not set");
+	}
 
-    if (salt) {
-        strncpy(&g_salt_buf[0], salt, KENV_MVALLEN);
-        g_salt = &g_salt_buf[0];
-    } else {
-        g_salt = NULL;
-    }
+	if (digest == NULL) {
+		mypanic("GKUT2 retrieved the key but kern.geom.eli.kut2.digest is not set");
+	}
 
-    static_kenv_wipe("kern.geom.eli.passphrase.from_tpm2.passphrase");
-	static_kenv_wipe("kern.geom.eli.passphrase");
+	int status = hex2bin((uint8_t*) nonce, &g_nonce_buf[0], &g_nonce_len);
+	if (status != 0) {
+		printf("gkut2_sanitize_kenv - hex2bin - nonce - %d\n");
+		mypanic("GKUT2 nonce could not be decoded");
+	}
+
+    if (hex2bin((uint8_t*) digest, &g_digest_buf[0], &g_digest_len) != 0) {
+		mypanic("GKUT2 digest could not be decoded");
+	}
+
+	if (g_digest_len != SHA256_DIGEST_LENGTH) {
+		mypanic("GKUT2 digest has wrong length");
+	}
 }
 
 
-SYSINIT(tpm2cpm_sanitize_kenv, SI_SUB_KMEM, SI_ORDER_ANY, tpm2cpm_sanitize_kenv, NULL);
+SYSINIT(gkut2_sanitize_kenv, SI_SUB_KMEM, SI_ORDER_ANY, gkut2_sanitize_kenv, NULL);
 
 
-static void tpm2cpm_init(void *param) {
-	EVENTHANDLER_REGISTER(mountroot, tpm2_check_passphrase_marker, NULL, EVENTHANDLER_PRI_FIRST);
+static void gkut2cpm_init(void *param) {
+	EVENTHANDLER_REGISTER(mountroot, gkut2_check_passphrase_marker, NULL, EVENTHANDLER_PRI_FIRST);
 }
 
 
-SYSINIT(tpm2cpm_init, SI_SUB_EVENTHANDLER + 1, SI_ORDER_ANY, tpm2cpm_init, NULL);
+SYSINIT(gkut2cpm_init, SI_SUB_EVENTHANDLER + 1, SI_ORDER_ANY, gkut2cpm_init, NULL);

@@ -26,3 +26,4 @@
 {"type": "ADD", "timestamp": "2022-11-13T07:26:38.718868", "description": "Use openssl rand instead of getrandbits()", "taskId": 15}
 {"type": "FINISH", "timestamp": "2022-11-13T10:01:02.215794", "taskId": 13}
 {"type": "FINISH", "timestamp": "2022-11-13T10:08:46.525678", "taskId": 15}
+{"type": "ADD", "timestamp": "2022-11-16T09:00:32.545036", "description": "Change passphrase marker name to gkut2_marker", "taskId": 16}

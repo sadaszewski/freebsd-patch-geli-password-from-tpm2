@@ -213,7 +213,7 @@ def patch_generic_conf_amd64(args):
         raise RuntimeError('Could not find first options statements in sys/amd64/conf/GENERIC')
 
     lines = lines[:i] + [
-        'options        TPM2_PASSPHRASE         # TPM2 Passphrase Support (rootfs check)'
+        'options        GKUT2         # GELI Key Using TPM2 (GKUT2) Support (rootfs check)'
     ] + lines[i:]
 
     with open(fname, 'w') as f:
@@ -233,7 +233,7 @@ def patch_sys_conf_files(args):
         raise RuntimeError('Could not find kern/init_main.c in sys/conf/files')
 
     lines = lines[:i+1] + [
-        'kern/tpm2cpm.c                  optional tpm2_passphrase'
+        'kern/gkut2cpm.c                  optional gkut2'
     ] + lines[i+1:]
 
     with open(fname, 'w') as f:
@@ -255,7 +255,7 @@ def patch_sys_conf_options(args):
     lines = lines[:i+1] + [
         '',
         '# TPM2 Passphrase security',
-        'TPM2_PASSPHRASE opt_tpm.h'
+        'GKUT2 opt_gkut2.h'
     ] + lines[i+1:]
 
     with open(fname, 'w') as f:

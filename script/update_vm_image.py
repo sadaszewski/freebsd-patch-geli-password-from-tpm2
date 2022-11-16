@@ -77,13 +77,18 @@ def main():
         es.callback(lambda: print('umount EFI partition') or \
             subprocess.check_output([ 'umount', os.path.join(args.alt_root, 'boot', 'efi') ]))
 
-        print('install')
+        print('install bootloader')
         env = dict(os.environ)
         env['DESTDIR'] = args.alt_root
-        # os.makedirs(os.path.join(d, 'stand_destdir', 'usr', 'share', 'man', 'man8'))
-        # os.makedirs(os.path.join(d, 'stand_destdir', 'usr', 'share', 'man', 'man5'))
+        os.makedirs(os.path.join(args.alt_root, 'usr', 'share', 'man', 'man8'), exist_ok=True)
+        os.makedirs(os.path.join(args.alt_root, 'usr', 'share', 'man', 'man5'), exist_ok=True)
         subprocess.run([ 'make', 'install' ],
             cwd=os.path.join(args.freebsd_src_dir, 'stand'),
+            env=env, check=True)
+
+        print('install kernel')
+        subprocess.run([ 'make', 'installkernel' ],
+            cwd=args.freebsd_src_dir,
             env=env, check=True)
 
         print('copy setup_gkut2.py script...')

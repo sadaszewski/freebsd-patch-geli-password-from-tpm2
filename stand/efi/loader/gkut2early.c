@@ -133,7 +133,7 @@ EFI_STATUS gkut2_start_policy_session(TPMI_SH_AUTH_SESSION *SessionHandle, TPMS_
 
     status = gkut2_random_bytes(&NonceCaller.buffer[0], NonceCaller.size);
     if (EFI_ERROR(status)) {
-        printf("gkut2_start_policy_session - gkut2_random_bytes - 0x%lX\n");
+        printf("gkut2_start_policy_session - gkut2_random_bytes - 0x%lX\n", status);
         return status;
     }
 

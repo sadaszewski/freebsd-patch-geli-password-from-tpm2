@@ -16,7 +16,7 @@ def create_parser():
     parser.add_argument('--geom', type=str)
     parser.add_argument('--nbits', type=int, default=256)
     parser.add_argument('--pcr-policy', type=str, default='sha256:0,2,4,7,8')
-    parser.add_argument('--marker-filename', type=str, default='/.passphrase_marker')
+    parser.add_argument('--marker-filename', type=str, default='/.gkut2_rootfs_marker')
     parser.add_argument('--iv-nbits', type=int, default=128)
     parser.add_argument('--no-geli', action='store_true')
     parser.add_argument('--geli-key-nbits', type=int, default=512)

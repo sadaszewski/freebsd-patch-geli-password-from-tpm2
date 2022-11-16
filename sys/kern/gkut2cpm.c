@@ -96,7 +96,29 @@ static void wipe_secrets() {
 }
 
 
+static void static_kenv_wipe(const char *name) {
+    if (dynamic_kenv) {
+        panic("%s: called with dynamic kenv", __func__);
+    }
+	char *value = kern_getenv(name);
+	if (value == NULL)
+		return;
+	while (*value) {
+		*value++ = '\x01';
+	}
+}
+
+
+static void wipe_kenv() {
+	if (!dynamic_kenv) {
+		static_kenv_wipe("kern.geom.eli.kut2.nonce");
+		static_kenv_wipe("kern.geom.eli.kut2.digest");
+	}
+}
+
+
 static void destroy_crypto_info() {
+	wipe_kenv();
     wipe_secrets();
 	wipe_geli_keys();
 }
@@ -217,26 +239,10 @@ static void gkut2_check_passphrase_marker(void *param) {
 }
 
 
-static void static_kenv_wipe(const char *name) {
-    if (dynamic_kenv) {
-        panic("%s: called with dynamic kenv", __func__);
-    }
-	char *value = kern_getenv(name);
-	if (value == NULL)
-		return;
-	while (*value) {
-		*value++ = '\x01';
-	}
-}
-
-
 // This needs to happen before the dynamic kenv is initialized
 static void gkut2_sanitize_kenv(void *param) {
-    const char *nonce = kern_getenv("kern.geom.eli.kut2.nonce");
-    const char *digest = kern_getenv("kern.geom.eli.kut2.digest");
-
-	static_kenv_wipe("kern.geom.eli.kut2.nonce");
-	static_kenv_wipe("kern.geom.eli.kut2.digest");
+    char *nonce = kern_getenv("kern.geom.eli.kut2.nonce");
+    char *digest = kern_getenv("kern.geom.eli.kut2.digest");
 
     if (nonce == NULL && digest == NULL) {
         g_was_retrieved = false;
@@ -266,6 +272,11 @@ static void gkut2_sanitize_kenv(void *param) {
 	if (g_digest_len != SHA256_DIGEST_LENGTH) {
 		mypanic("GKUT2 digest has wrong length");
 	}
+
+	freeenv(nonce); // this does nothing with static kenv
+	freeenv(digest); // but hey let's keep up the good habits
+
+	wipe_kenv();
 }
 
 

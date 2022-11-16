@@ -30,38 +30,38 @@ static void gkut2_sha256_hexdigest(const unsigned char *digest, char *digest_hum
 }
 
 
-EFI_STATUS gkut2_check_passphrase_marker(GKUT2B_SALT *salt, GKUT2B_GELI_KEY *geli_key) {
+EFI_STATUS gkut2_check_rootfs_marker(GKUT2B_SALT *salt, GKUT2B_GELI_KEY *geli_key) {
 	int fd;
 	struct stat st;
 	BYTE buf[SHA256_DIGEST_LENGTH];
 	SHA256_CTX ctx;
 	unsigned char digest[SHA256_DIGEST_LENGTH];
 
-	if ((fd = open("/.passphrase_marker", O_RDONLY)) < 0) {
-		printf("Selected rootfs does not contain the passphrase marker!\n");
+	if ((fd = open("/.gkut2_rootfs_marker", O_RDONLY)) < 0) {
+		printf("Selected rootfs does not contain the GKUT2 marker!\n");
 		return EFI_NOT_FOUND;
 	}
 
 	if (fstat(fd, &st) < 0) {
-		printf("fstat() on passphrase marker failed!\n");
+		printf("fstat() on GKUT2 rootfs marker failed!\n");
 		close(fd);
 		return EFI_NOT_FOUND;
 	}
 
 	if (st.st_uid != 0 || (st.st_mode & 0077)) {
-		printf("Passphrase marker has wrong permissions set!\n");
+		printf("GKUT2 rootfs marker has wrong permissions set!\n");
 		close(fd);
 		return EFI_INVALID_PARAMETER;
 	}
 
-	if (st.st_size > SHA256_DIGEST_LENGTH * 2) {
-		printf("Passphrase marker too long!\n");
+	if (st.st_size != SHA256_DIGEST_LENGTH) {
+		printf("GKUT2 rootfs marker has wrong length!\n");
 		close(fd);
 		return EFI_BAD_BUFFER_SIZE;
 	}
 
 	if (read(fd, buf, st.st_size) != st.st_size) {
-		printf("Failed to read the passphrase marker!\n");
+		printf("Failed to read the GKUT2 rootfs marker!\n");
 		close(fd);
 		return EFI_BAD_BUFFER_SIZE;
 	}
@@ -73,11 +73,11 @@ EFI_STATUS gkut2_check_passphrase_marker(GKUT2B_SALT *salt, GKUT2B_GELI_KEY *gel
 	SHA256_Final(digest, &ctx);
 
 	if (strncmp(buf, digest, SHA256_DIGEST_LENGTH) != 0) {
-		printf("Passphrase marker does not match!\n");
+		printf("GKUT2 rootfs marker does not match!\n");
 		return EFI_INVALID_PARAMETER;
 	}
 
-	printf("Passphrase marker found and matching.\n");
+	printf("GKUT2 rootfs marker found and matching.\n");
 	return EFI_SUCCESS;
 }
 

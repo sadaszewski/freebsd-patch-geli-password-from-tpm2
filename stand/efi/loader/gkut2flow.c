@@ -113,7 +113,7 @@ void gkut2_late(GKUT2_STATE *state) {
     EFI_STATUS status;
 
     if (state->KeyWasDecrypted) {
-        status = gkut2_check_passphrase_marker(&state->salt, &state->geli_key);
+        status = gkut2_check_rootfs_marker(&state->salt, &state->geli_key);
         if (EFI_ERROR(status)) {
             printf("gkut2_late - gkut2_check_passphrase_marker - %lu\n", status);
             goto Error;

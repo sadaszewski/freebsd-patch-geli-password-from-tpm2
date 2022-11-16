@@ -172,7 +172,7 @@ static int hex2bin(const uint8_t *hex, uint8_t *bin, uint64_t *bin_len) {
 }
 
 
-static void gkut2_check_passphrase_marker(void *param) {
+static void gkut2_check_rootfs_marker(void *param) {
 	struct thread *td = curthread;
 
 	int error;
@@ -189,22 +189,22 @@ static void gkut2_check_passphrase_marker(void *param) {
 		return;
 	}
 
-	error = kern_statat(td, 0, AT_FDCWD, "/.passphrase_marker", UIO_SYSSPACE, &sb, NULL);
+	error = kern_statat(td, 0, AT_FDCWD, "/.gkut2_rootfs_marker", UIO_SYSSPACE, &sb, NULL);
 	if (error) {
-		mypanic("kern_statat() on passphrase marker failed");
+		mypanic("kern_statat() on GKUT2 rootfs marker failed");
 	}
 
 	if (sb.st_uid != 0 || (sb.st_mode & 0077)) {
-		mypanic("Passphrase marker has wrong permissions set");
+		mypanic("GKUT2 rootfs marker has wrong permissions set");
 	}
 
 	if (sb.st_size > SHA256_DIGEST_LENGTH) {
-		mypanic("Passphrase marker too long");
+		mypanic("GKUT2 rootfs marker too long");
 	}
 
-	error = kern_openat(td, AT_FDCWD, "/.passphrase_marker", UIO_SYSSPACE, O_RDONLY, 0);
+	error = kern_openat(td, AT_FDCWD, "/.gkut2_rootfs_marker", UIO_SYSSPACE, O_RDONLY, 0);
 	if (error) {
-		mypanic("Cannot open the passphrase marker");
+		mypanic("Cannot open GKUT2 rootfs marker");
 	}
 	fd = td->td_retval[0];
 
@@ -216,7 +216,7 @@ static void gkut2_check_passphrase_marker(void *param) {
 	auio.uio_segflg = UIO_SYSSPACE;
 	error = kern_readv(td, fd, &auio);
 	if (error) {
-		mypanic("Failed to read the passphrase marker");
+		mypanic("Failed to read GKUT2 rootfs marker");
 	}
 	buf[sb.st_size] = '\0';
 
@@ -226,15 +226,15 @@ static void gkut2_check_passphrase_marker(void *param) {
 	SHA256_Final(&digest[0], &ctx);
 
 	if (memcmp(&digest[0], &g_digest_buf[0], SHA256_DIGEST_LENGTH) != 0) {
-		mypanic("Passphrase marker does not match");
+		mypanic("GKUT2 rootfs marker does not match");
 	}
 
-	printf("Passphrase marker found and matching - we are done.\n");
+	printf("GKUT2 rootfs marker found and matching - we are done.\n");
     wipe_secrets();
 
 	error = kern_close(td, fd);
 	if (error) {
-		printf("Failed to close passphrase marker - that's weird.\n");
+		printf("Failed to close GKUT2 rootfs marker - that's weird.\n");
 	}
 }
 
@@ -261,7 +261,7 @@ static void gkut2_sanitize_kenv(void *param) {
 
 	int status = hex2bin((uint8_t*) nonce, &g_nonce_buf[0], &g_nonce_len);
 	if (status != 0) {
-		printf("gkut2_sanitize_kenv - hex2bin - nonce - %d\n");
+		printf("gkut2_sanitize_kenv - hex2bin - nonce - %d\n", status);
 		mypanic("GKUT2 nonce could not be decoded");
 	}
 
@@ -284,7 +284,7 @@ SYSINIT(gkut2_sanitize_kenv, SI_SUB_KMEM, SI_ORDER_ANY, gkut2_sanitize_kenv, NUL
 
 
 static void gkut2cpm_init(void *param) {
-	EVENTHANDLER_REGISTER(mountroot, gkut2_check_passphrase_marker, NULL, EVENTHANDLER_PRI_FIRST);
+	EVENTHANDLER_REGISTER(mountroot, gkut2_check_rootfs_marker, NULL, EVENTHANDLER_PRI_FIRST);
 }
 
 

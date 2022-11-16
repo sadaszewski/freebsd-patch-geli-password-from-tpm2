@@ -20,6 +20,7 @@ def create_parser():
     parser.add_argument('--iv-nbits', type=int, default=128)
     parser.add_argument('--no-geli', action='store_true')
     parser.add_argument('--geli-key-nbits', type=int, default=512)
+    parser.add_argument('--keyno', type=int, nargs='+', default=[0])
     return parser
 
 
@@ -151,10 +152,11 @@ def main():
 
         if not args.no_geli:
             print('Modifying GELI passphrase...')
-            for i in range(2):
+            for i in args.keyno:
                 subprocess.check_output([ 'geli', 'setkey',
                     '-n', str(i),
-                    '-J', os.path.join(d, '.newpass'),
+                    '-P',
+                    '-K', os.path.join(d, '.newkey'),
                     geom ])
 
     print('Success!')

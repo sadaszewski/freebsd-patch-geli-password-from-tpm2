@@ -9,4 +9,9 @@ A patch for the FreeBSD source tree which enables fetching of GELI password from
 - Additionally, GELI keys are now stored rather than the passphrase
 - which eliminated the key computation phase, making things faster.
 - Old code can be accessed in the "deprecated_using_nvindex" branch.
+-
+- After installing the patched kernel and loader you can set up the
+- the scheme using script/setup_gkut2.py.
+-
+- GKUT2 stands for GELI Key Using TPM2.
 ```
